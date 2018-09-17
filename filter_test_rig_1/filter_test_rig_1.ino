@@ -5,15 +5,14 @@
 
 //Pins
 #define PRESSURE_PIN CONTROLLINO_A0
-#define FLOW_PIN CONTROLLINO_A1
-#define TEMP_PIN CONTROLLINO_A2
+#define FLOW_PIN CONTROLLINO_A14          //Flow cable is white
+#define TEMP_PIN CONTROLLINO_A15          //Temp cable is yellow
 #define PUMP_PWM_PIN CONTROLLINO_D11      //5V level
 #define PUMP_INA_PIN CONTROLLINO_D7       //5V level
 #define PUMP_INB_PIN CONTROLLINO_D9       //5V level
 
 //H-bridge module ENA and ENB pins are not used
 //https://www.olimex.com/Products/Robot-CNC-Parts/MotorDrivers/BB-VNH3SP30/open-source-hardware
-
 
 
 
@@ -52,6 +51,8 @@ double currentFlow = 0;
 double lastFlow = 0;
 double currentTemp = 0;
 double lastTemp = 0;
+
+//double pressure[10] = {1.19, 2,37
 
 const int8_t maxPressure = 4;
 const uint16_t restAtPressureMs = 2000;
@@ -180,6 +181,10 @@ void setup() {
   pinMode(PRESSURE_PIN, INPUT);
   pinMode(FLOW_PIN, INPUT);
 
+  // CW
+  digitalWrite(PUMP_INA_PIN, LOW);
+  digitalWrite(PUMP_INB_PIN, HIGH);
+  
   //Start serial communication
   Serial.begin(9600);
 
@@ -216,11 +221,11 @@ void loop() {
       currentFlow= readFlow();
       
       
-      Serial.print(currentPressure);
+      Serial.print(analogRead(PRESSURE_PIN)*0.03);
       Serial.print(",");
-      Serial.print(currentTemp);
+      Serial.print(analogRead(TEMP_PIN)*0.03);
       Serial.print(",");
-      Serial.println(currentFlow);
+      Serial.println(analogRead(FLOW_PIN)*0.03);
 
     }
 
@@ -375,6 +380,9 @@ void doStuffWithData() {
 
     else if ( receivedInt >= 0 && receivedInt <= 255) {
       pumpPwm = receivedInt;
+      Serial.print("pumpPwm set to: ");
+      Serial.println(pumpPwm);
+      analogWrite(PUMP_PWM_PIN, pumpPwm);
     }
 
     newData = false;
