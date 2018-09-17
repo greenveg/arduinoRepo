@@ -3,7 +3,8 @@
 #include <EEPROMex.h>
 //#include "Arduino.h"
 
-#define PIN CONTROLLINO_D5
+#define FLOW_PIN CONTROLLINO_A5
+#def
 
 //Serial reading
 const byte numChars = 32;

@@ -9,9 +9,9 @@ int receivedInt;
 boolean newData = false;
 
 //Motor control pins
-const int inaPin = CONTROLLINO_D1;        //CTRL4
-const int inbPin = CONTROLLINO_D3;        //CTRL5
-const int pwmPin = CONTROLLINO_D5;        //CTRL6
+const int inaPin = CONTROLLINO_D7;        //CTRL4
+const int inbPin = CONTROLLINO_D9;        //CTRL5
+const int pwmPin = CONTROLLINO_D11;        //CTRL6
 
 //Pressure sensor pins
 const int pressureSensor1Pin = CONTROLLINO_A0;
@@ -24,7 +24,7 @@ int stateVar = 1;
 int pressure1 = 0;
 bool valveIsOpen = false;
 int cycleNumber;
-unsigned long previousMillis = 0; 
+unsigned long previousMillis = 0;
 int mBar;
 bool runProgram;
 const int addr1 = 4;
@@ -37,7 +37,7 @@ void setup() {
   cycleNumber = EEPROM.read(addr1) * 100;
   saveNumber = EEPROM.read(addr1);
   lastSave = cycleNumber;
-  
+
   //Motor pin setup
   pinMode(inaPin, OUTPUT);
   pinMode(inbPin, OUTPUT);
@@ -46,9 +46,9 @@ void setup() {
   //Valve pin setup
   pinMode(valve1Pin, OUTPUT);
   // digitalWrite(valve1Pin, LOW);
-  
+
   //Analog sensor pin setup
-  pinMode(pressureSensor1Pin, INPUT); 
+  pinMode(pressureSensor1Pin, INPUT);
 
   //Start serial communication
   Serial.begin(9600);
@@ -57,7 +57,7 @@ void setup() {
   //Boot sequence
   runProgram = false;
   digitalWrite(valve1Pin, HIGH);
-  valveIsOpen = true; 
+  valveIsOpen = true;
   Serial.println("...booting");
   Serial.println("Available commands are as follows:");
   Serial.println("start = Starts the filter test cycle");
@@ -76,19 +76,19 @@ void setup() {
 }//end setup
 
 void loop() {
-  unsigned long currentMillis = millis();  
+  unsigned long currentMillis = millis();
   recvWithEndMarker();  //Read serial
   doStuffWithData();    //Do things with received data
 
   //Safety check
   if (readPressure() >= 5000 ) {
-    Serial.println("Pressure exceeded 5 bar, program was stopped");  
+    Serial.println("Pressure exceeded 5 bar, program was stopped");
     openValve();
     runPump(0);
     runProgram = false;
     delay(500);
   }
-  
+
   //Print pressure over serial if 2sec has passed
   if (currentMillis - previousMillis >= 2000) {
     readPressure();
@@ -96,9 +96,9 @@ void loop() {
     Serial.println(" mBar");
     Serial.println("---------------------------------------------------------");
     previousMillis = currentMillis;
-  } 
-  
-  
+  }
+
+
   if (runProgram) {
     Serial.println("------------------");
     runPump(40);
@@ -118,19 +118,19 @@ void loop() {
       delay(1000);
       cycleNumber++;
     }
-    if (cycleNumber == lastSave+100 ) {
+    if (cycleNumber == lastSave + 100 ) {
       saveNumber++;
       EEPROM.write(addr1, saveNumber);
       lastSave = cycleNumber;
     }
-    
+
   }//end of program
 
 
 }//end loop
 
 void runPump(int pwmValue) {
-  if( pwmValue <= 100 ) {
+  if ( pwmValue <= 100 ) {
     Serial.print("runPump(");
     Serial.print(pwmValue);
     Serial.println(")");
@@ -149,10 +149,10 @@ void openValve() {
     Serial.println("openValve()");
     digitalWrite(valve1Pin, HIGH);
     delay(200);
-    valveIsOpen = true;  
+    valveIsOpen = true;
   }
   else {
-    Serial.println("Valve already open");  
+    Serial.println("Valve already open");
   }
 }
 
@@ -164,7 +164,7 @@ void closeValve() {
     valveIsOpen = false;
   }
   else {
-    Serial.println("Valve already closed");  
+    Serial.println("Valve already closed");
   }
 }
 
@@ -176,7 +176,7 @@ int readPressure() {
   // read out value from A0 screw terminal input
   measurementResult = analogRead(pressureSensor1Pin);
   //map to mV, 30400 because the voltage dividers has some overhead safety
-  measurementResultmVoltage = map(measurementResult, 0, 1023, 0, 30400); 
+  measurementResultmVoltage = map(measurementResult, 0, 1023, 0, 30400);
   mBar = map(measurementResultmVoltage, 0, 10000, 0, 6000);
   return mBar;
 
@@ -190,7 +190,7 @@ void recvWithEndMarker() {
 
   while (Serial.available() > 0 && newData == false) {
     rc = Serial.read();
-  
+
     if (rc != endMarker) {
       receivedChars[ndx] = rc;
       ndx++;
@@ -198,66 +198,62 @@ void recvWithEndMarker() {
         ndx = numChars - 1;
       }
     }
-   else {
-    receivedChars[ndx] = '\0'; // terminate the string
-    ndx = 0;
-    newData = true;
+    else {
+      receivedChars[ndx] = '\0'; // terminate the string
+      ndx = 0;
+      newData = true;
     }
   }
 
- //receivedInt = atoi(receivedChars);
+  //receivedInt = atoi(receivedChars);
 }
 
 void doStuffWithData() {
   if (newData == true) {
 
-  if(strcmp(receivedChars, "openValve") == 0) {
-    openValve();
-  }
-  else if(strcmp(receivedChars, "closeValve") == 0) {
-    closeValve();
-  }
-  else if(strcmp(receivedChars, "readPressure") == 0) {
-    Serial.print(readPressure());
-    Serial.println("mBar");
-  }
-  
-  else if(strcmp(receivedChars, "start") == 0) {
-    runProgram = true;
-  }
-  
-  else if(strcmp(receivedChars, "stop") == 0) {
-    runProgram = false;
-    runPump(0);
-  }
+    if (strcmp(receivedChars, "openValve") == 0) {
+      openValve();
+    }
+    else if (strcmp(receivedChars, "closeValve") == 0) {
+      closeValve();
+    }
+    else if (strcmp(receivedChars, "readPressure") == 0) {
+      Serial.print(readPressure());
+      Serial.println("mBar");
+    }
 
-  else if(strcmp(receivedChars, "no") == 0) {
-    runPump(0);
-  }  
-  else if(strcmp(receivedChars, "low") == 0) {
-    runPump(25);
-  }
-  else if(strcmp(receivedChars, "med") == 0) {
-    runPump(38);
-  }
-  else if(strcmp(receivedChars, "high") == 0) {
-    runPump(46);
-  }
-  
-  else if(strcmp(receivedChars, "eepromSaveNumber") == 0) {
-    Serial.print("EEPROM save number: ");
-    Serial.println(EEPROM.read(addr1));
-  } 
-  else if(strcmp(receivedChars, "cycleNumber") == 0) {
-    Serial.print("cycleNumber: ");
-    Serial.println(cycleNumber);
-  }
+    else if (strcmp(receivedChars, "start") == 0) {
+      runProgram = true;
+    }
 
-  
-   newData = false;
+    else if (strcmp(receivedChars, "stop") == 0) {
+      runProgram = false;
+      runPump(0);
+    }
+
+    else if (strcmp(receivedChars, "no") == 0) {
+      runPump(0);
+    }
+    else if (strcmp(receivedChars, "low") == 0) {
+      runPump(25);
+    }
+    else if (strcmp(receivedChars, "med") == 0) {
+      runPump(38);
+    }
+    else if (strcmp(receivedChars, "high") == 0) {
+      runPump(46);
+    }
+
+    else if (strcmp(receivedChars, "eepromSaveNumber") == 0) {
+      Serial.print("EEPROM save number: ");
+      Serial.println(EEPROM.read(addr1));
+    }
+    else if (strcmp(receivedChars, "cycleNumber") == 0) {
+      Serial.print("cycleNumber: ");
+      Serial.println(cycleNumber);
+    }
+
+
+    newData = false;
   }
 }
-
-
-
-
