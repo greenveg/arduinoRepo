@@ -32,7 +32,6 @@ unsigned long waitStartedMillis = 0;
 int userMinute = 0;
 bool countDownMinutesHasRun = false;
 bool waitForMsHasRun = false;
-bool rampToPressureHasRun = true;
 bool pumpOnFlag = false;
 
 //Script vars
@@ -40,7 +39,7 @@ unsigned long minute = 60000;
 uint8_t state = 0;
 uint8_t errorState = 99;
 unsigned long count = 0;
-unsigned long maxCount = 10;
+unsigned long maxCount = 100;
 uint8_t eepromCount = 0;
 const unsigned int eepromCountAddr = 350;
 unsigned long pumpStartedMillis = 0;
@@ -197,13 +196,13 @@ void setup() {
   printDateAndTime();
   printListOfCommands();
 
-
 }//end setup
 
 
 void loop() {
   currentMillis = millis();
 
+  analogWrite(PUMP_PWM_PIN, pumpPwm);
   recvWithEndMarker();  //Read serial
   doStuffWithData();    //Do things with received data, if you want to add a command, edit this func
 
@@ -251,23 +250,23 @@ void loop() {
 
         case 1:
           pumpStartedMillis = currentMillis;  
-          analogWrite(PUMP_PWM_PIN, 50);
+          //analogWrite(PUMP_PWM_PIN, 50);
           state++;
           break;
 
         case 2:
           if (currentPressure <= maxPressure && pumpPwm < 255) {
             pumpPwm++;
-            analogWrite(PUMP_PWM_PIN, pumpPwm);
+            //analogWrite(PUMP_PWM_PIN, pumpPwm);
             state = 3;
           }
           else if (pumpPwm >= 255 && currentPressure <= maxPressure && lastPressure <= maxPressure) {
-            Serial.println("Pressure could not be reached, going to error state");
+            Serial.println("Pressure could not be reached, retrying");
             pumpPwm = 0;
-            analogWrite(PUMP_PWM_PIN, pumpPwm);
-            state = 99; //error state
+            //analogWrite(PUMP_PWM_PIN, pumpPwm);
           }
           else if (currentPressure >= maxPressure && lastPressure >= maxPressure) {
+            Serial.println("Pressure reached");
             state = 5;
           }
           break;
@@ -285,9 +284,8 @@ void loop() {
           break;
           
         case 6:
-          Serial.println("Pressure reached, shutting down");
           pumpPwm = 0;
-          analogWrite(PUMP_PWM_PIN, pumpPwm);
+          //analogWrite(PUMP_PWM_PIN, pumpPwm);
           state++;
           break;
           
@@ -423,7 +421,7 @@ void doStuffWithData() {
       pumpPwm = receivedInt;
       Serial.print("pumpPwm set to: ");
       Serial.println(pumpPwm);
-      analogWrite(PUMP_PWM_PIN, pumpPwm);
+      //analogWrite(PUMP_PWM_PIN, pumpPwm);
     }
 
     newData = false;

@@ -46,7 +46,7 @@ void setup() {
   Serial.begin(9600);
   Serial.println("...booting");
   printListOfCommands();
-  
+
 }
 
 void loop() {
@@ -84,25 +84,25 @@ void recvWithEndMarker() {
 void doStuffWithData() {
   if (newData == true) {
 
-  if (strcmp(receivedChars, "list") == 0) {
-    printListOfCommands();
-  }
-
-  /*
-  else if (strcmp(receivedChars, "pump") == 0) {
-      if (pumpOnFlag == false) {
-        analogWrite(PUMP_PWM_PIN, pumpPwm);
-        Serial.println("Pump turned ON");
-        pumpOnFlag = true;
-      }
-      else if (pumpOnFlag == true) {
-        analogWrite(PUMP_PWM_PIN, 0);
-        Serial.println("Pump turned OFF");
-        pumpOnFlag = false;
-      }
+    if (strcmp(receivedChars, "list") == 0) {
+      printListOfCommands();
     }
+
+    /*
+      else if (strcmp(receivedChars, "pump") == 0) {
+        if (pumpOnFlag == false) {
+          analogWrite(PUMP_PWM_PIN, pumpPwm);
+          Serial.println("Pump turned ON");
+          pumpOnFlag = true;
+        }
+        else if (pumpOnFlag == true) {
+          analogWrite(PUMP_PWM_PIN, 0);
+          Serial.println("Pump turned OFF");
+          pumpOnFlag = false;
+        }
+      }
     */
-    
+
     else if ( receivedInt >= 0 && receivedInt <= 255) {
       pumpPwm = receivedInt;
       analogWrite(PUMP_PWM_PIN, pumpPwm);
