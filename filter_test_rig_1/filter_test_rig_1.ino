@@ -38,8 +38,9 @@ bool pumpOnFlag = false;
 //Script vars
 unsigned long minute = 60000;
 uint8_t state = 0;
+uint8_t errorState = 99;
 unsigned long count = 0;
-unsigned long maxCount = 3000;
+unsigned long maxCount = 10;
 uint8_t eepromCount = 0;
 const unsigned int eepromCountAddr = 350;
 unsigned long pumpStartedMillis = 0;
@@ -54,8 +55,8 @@ double lastTemp = 0;
 
 //double pressure[10] = {1.19, 2,37
 
-const int8_t maxPressure = 4;
-const uint16_t restAtPressureMs = 2000;
+double maxPressure = 3.5;
+const uint16_t restAtPressureMs = 1000;
 
 
 //Functions
@@ -208,7 +209,7 @@ void loop() {
 
   //Program
   if (runProgram) {
-    if (currentMillis - previousReadMillis >= 1000) {
+    if (currentMillis - previousReadMillis >= 500) {
       previousReadMillis = currentMillis;
       //Serial.println("Reading sensors");
 
@@ -220,9 +221,12 @@ void loop() {
       //currentTemp = readTemp();
       //currentFlow= readFlow();
       
-      /*
-      Serial.print(analogRead(PRESSURE_PIN)*0.03);
+      Serial.print(count);
       Serial.print(",");
+      Serial.print(currentPressure);
+      Serial.print(",");
+      Serial.println(pumpPwm);
+      /*
       Serial.print(analogRead(TEMP_PIN)*0.03);
       Serial.print(",");
       Serial.println(analogRead(FLOW_PIN)*0.03);
@@ -252,19 +256,18 @@ void loop() {
           break;
 
         case 2:
-          if (currentPressure+lastPressure/2 <= maxPressure && pumpPwm < 255) {
+          if (currentPressure <= maxPressure && pumpPwm < 255) {
             pumpPwm++;
             analogWrite(PUMP_PWM_PIN, pumpPwm);
-            Serial.println(pumpPwm);
             state = 3;
-            
           }
           else if (pumpPwm >= 255 && currentPressure <= maxPressure && lastPressure <= maxPressure) {
             Serial.println("Pressure could not be reached, going to error state");
-            state = 6; 
+            pumpPwm = 0;
+            analogWrite(PUMP_PWM_PIN, pumpPwm);
+            state = 99; //error state
           }
-          else if (currentPressure >= maxPressure) {
-            analogWrite(PUMP_PWM_PIN, 50); 
+          else if (currentPressure >= maxPressure && lastPressure >= maxPressure) {
             state = 5;
           }
           break;
@@ -272,18 +275,33 @@ void loop() {
         case 3:
           waitForMs(100);
           break;
+          
         case 4:
           state = 2;
           break;
           
         case 5:
-          Serial.println("Pressure reached, resetting");
-          
+          waitForMs(restAtPressureMs);
           break;
           
         case 6:
-          
+          Serial.println("Pressure reached, shutting down");
+          pumpPwm = 0;
+          analogWrite(PUMP_PWM_PIN, pumpPwm);
+          state++;
           break;
+          
+        case 7:
+          waitForMs(1000);
+          break;
+        case 8:
+          Serial.println("Cycle finished, restarting");
+          count++;
+          state = 2;
+          break;
+        case 99:
+          
+          break; 
 
       }//end switch
       
