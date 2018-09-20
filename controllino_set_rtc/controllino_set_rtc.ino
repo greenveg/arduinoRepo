@@ -94,7 +94,9 @@ void printDateAndTime() {
 
 void setup() {
   Serial.begin(9600);
+  Serial.println(' ');
   Serial.println("booting");
+  Serial.println(' ');
   
   year = getYear();
   month = getMonth();
