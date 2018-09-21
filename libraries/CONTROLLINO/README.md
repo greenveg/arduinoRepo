@@ -1,14 +1,37 @@
+## :exclamation: NEW Board Support Package (BSP) VERSION 3.0.2 AVAILABLE :exclamation:
+## :exclamation: NEW CONTROLLINO library VERSION 3.0.2 AVAILABLE :exclamation:
 
-##:exclamation: NEW BOARD "CONTROLLINO MAXI Automation" AVAILABLE :exclamation:
+### If you want to upgrade your CONTROLLINO BSP go to your Arduino IDE Boards Manager!
+### If you want to upgrade your CONTROLLINO library go to your Arduino IDE Library Manager!
 
-Check out the newest board [here](#controllino-maxi-automation)!
+We have prepared a new version of BSP featuring following changes and upgrades:
+* CONTROLLINO BSP refers to Arduino core libraries and does not include any (frozen) core libraries anymore
+* CONTROLLINO BSP refers to Arduino platform and tool definitions and does not include any (frozen) platform and tool definitions anymore
+* All CONTROLLINO pins have Arduino number now! No need to access the pins through the registers anymore! 
+* PJ3 - CONTROLLINO ETHERNET CHIP SELECT is now pin 70
+* PE6 - CONTROLLINO ETHERNET INTERRUPT is now pin 71
+* PJ2 - CONTROLLINO RTC CHIP SELECT is now pin 72
+* PJ7 - CONTROLLINO RTC INTERRUPT is now pin 73
+* PE7 - CONTROLLINO OVERLOAD is now pin 74
+* PJ6 - CONTROLLINO RS485 DE is now pin 75
+* PJ5 - CONTROLLINO RS485 /RE is now pin 76
+* PD4 - CONTROLLINO MEGA Digital 20 is now pin 77
+* PD5 - CONTROLLINO MEGA Digital 21 is now pin 78
+* PD6 - CONTROLLINO MEGA Digital 22 is now pin 79
+* PJ4 - CONTROLLINO MEGA Digital 23 is now pin 80
+* CONTROLLINO works with standard Ethernet library (Do not forget to update your Ethernet library to ver. 2.0.0 or newer.)
+* No need to tell the Ethernet library which pin is used for SPI chipselect - it should be assigned automatically.
+* CONTROLLINO bootloaders are part of the BSP now
 
-Having trouble compiling your code:question:
-* Upon releasing new version major changes have been made in board 1.0.1 and it's not compatible with library 1.0.0.
-* Arduino IDE has trouble deleting old board's version from your PC and it must be deleted manually.
-  * (Windows) To delete boards, press Win+R and type in this path: "%LOCALAPPDATA%\Arduino15\packages" (Arduino IDE 1.6.6 and later) or "%APPDATA%\Arduino15\packages" (Arduino IDE 1.6.5r5 and previous). New Windows Explorer window will open. Delete directory "CONTROLLINO Boards". Now you can install the newest board in Arduino IDE.
-  * (Linux) To delete boards, go to: "/home/(username)/.arduino15/packages" (a.k.a. ~/.arduino15/packages) and delete directory "CONTROLLINO Boards". Now you can install the newest board in Arduino IDE.
-  * (Mac OS X) To delete boards, go to: "/Users/(username)/Library/Arduino15/packages" and delete directory "CONTROLLINO Boards". Now you can install the newest board in Arduino IDE.
+We have prepared a new version of library featuring following changes and upgrades:
+* Added some more comfortable API functions like Controllino_RS485Init( aBaudrate ), Controllino_RS485TxEnable, Controllino_RS485RxEnable
+* Updated whole library to use new pin aliases
+* Updated all Examples to be synchronized with the latest BSP and library
+* Removed obsolete examples - no need to handle CONTROLLINO pins via PORT registers anymore
+
+If you will face some compilation errors after the update, please check your 
+c:\Users\UserName\AppData\Local\Arduino15\packages\CONTROLLINO_Boards\hardware\avr\
+folder and remove all previous obsolete versions (e.g. 2.0.0, 2.0.1, 3.0.0, or 3.0.1).
 
 # CONTROLLINO
 
@@ -23,6 +46,8 @@ This GitHub repository contains all you need to start with CONTROLLINO devices p
   * See our [Reference manual](#reference-manual)
 * Examples how to use special features of the CONTROLLINOs
   * When the library is installed in the Arduino IDE, you can find them i the File->Examples menu
+* Customized bootloaders for all CONTROLLINO variants
+  * See [Bootloaders](/Bootloaders) folder and follow the provided guides
 * Frequently Asked Questions
   * See our [FAQ](#faq)
 
@@ -112,7 +137,6 @@ For example, for MINI we have defined following aliases:
 ` CONTROLLINO_D6`
 
 ` CONTROLLINO_D7`
-
  
 ` CONTROLLINO_A0`
 
@@ -139,10 +163,9 @@ It should be added automatically with the `#include <Controllino.h>`.
 **Do not forget to properly setup the mechanical switch at your MINI!**
 
 ##### Initializes RTC library, SPI bus and RTC chip (RV-2123)
- *  @param aChipSelect is ignored. Kept for backwards compatibility only.
  *  @return Always returns 0
- *  
-`char Controllino_RTC_init(unsigned char aChipSelect)`
+ 
+`char Controllino_RTC_init()`
 
 ##### Sets time and date to the RTC chip (RV-2123)
  *  See [RTC chip manual](http://www.microcrystal.com/images/_Product-Documentation/02_Oscillator_&_RTC_Modules/02_Application_Manual/RV-2123-C2_App-Manual.pdf) for more information.
@@ -154,7 +177,7 @@ It should be added automatically with the `#include <Controllino.h>`.
  *  @param aMinute minutes 00 - 59
  *  @param aSecond seconds 00 - 59
  *  @return Returns 0 when succeeded, or -1 if the RTC library was not initialized before
- *  
+ 
 `char Controllino_SetTimeDate(unsigned char aDay, unsigned char aWeekDay,unsigned char aMonth, unsigned char aYear, unsigned char aHour, unsigned char aMinute, unsigned char aSecond);`
 
 ##### Reads out the time and date from the RTC chip (RV-2123)
@@ -167,73 +190,73 @@ It should be added automatically with the `#include <Controllino.h>`.
  *  @param aMinute pointer to minutes 00 - 59
  *  @param aSecond pointer to seconds 00 - 59
  *  @return Returns 0 when succeeded, or -1 if the RTC library was not initialized before
- *  
+ 
 `char Controllino_ReadTimeDate(unsigned char *aDay, unsigned char *aWeekDay, unsigned char *aMonth, unsigned char *aYear, unsigned char *aHour, unsigned char *aMinute, unsigned char *aSecond)`
 
 ##### Reads out the day value from the RTC chip (RV-2123)
  *  @return Returns day 01 - 31, or -1 if the RTC library was not initialized before
- *  
+ 
 `char Controllino_GetDay( void )`
 
 ##### Reads out the weekday value from the RTC chip (RV-2123)
  *  @return Returns weekday 00 - 06, or -1 if the RTC library was not initialized before
- *  
+ 
 `char Controllino_GetWeekDay( void )`
 
 #####  Reads out the month value from the RTC chip (RV-2123)
  *  @return Returns month 01 - 12, or -1 if the RTC library was not initialized before
- *  
+ 
 `char Controllino_GetMonth( void )`
 
 ##### Reads out the year value from the RTC chip (RV-2123)
  *  @return Returns year 00 - 99, or -1 if the RTC library was not initialized before
- *  
+ 
 `char Controllino_GetYear( void )`
 
 ##### Reads out the hours value from the RTC chip (RV-2123)
  *  @return Returns hours 01 - 12, or 00 - 23 (depending of 12H/24H mode), or -1 if the RTC library was not initialized before
- *  
+ 
 `char Controllino_GetHour( void )`
 
 ##### Reads out the minutes value from the RTC chip (RV-2123)
  *  @return Returns minutes 00 - 59, or -1 if the RTC library was not initialized before
- *  
+ 
 `char Controllino_GetMinute( void )`
 
 ##### Reads out the seconds value from the RTC chip (RV-2123)
  *  @return Returns seconds 00 - 59, or -1 if the RTC library was not initialized before
- *  
+ 
 `char Controllino_GetSecond( void )`
 
 ##### Reads time and date from RTC chip and prints it on serial line
  *  This function expects that the Serial was initialized before calling it.
  *  Format is DD/MM/YY   HH:MM:SS
  *  @return Returns seconds 0, or -1 if the RTC library was not initialized before
- *  
+ 
 `char Controllino_PrintTimeAndDate( void )`
 
 
 ### RS485 functions
 
-Please note that RS485 interface is present ony in MAXI and MEGA variants.
+Please note that RS485 interface is present only in MAXI and MEGA variants.
 
 ##### Initialization of the RS485 bus
- *  Serial3 still needs to be initialized separately. This only inits RE and DE pins.
- *  @return Always returns 0 
- *  
-`char Controllino_RS485Init( void )`
+ *  @param Baudrate
+ *  @return Always returns 0
+ 
+`char Controllino_RS485Init( Baudrate )`
 
-##### Control of RS485 bus RE signal 
- *  @param mode 0 for RS485 Receive Enable Active, 1 for Receive Enable Inactive 
- *  @return Returns 0 when succeeded, -1 for unsupported mode
- *  
-`char Controllino_SwitchRS485RE(char mode)`
+##### Control of RS485 direction to receive 
+* Do not forget to wait until all data were transmitted before you switch back to reception
+* You can use Serial3.flush() function for that.
 
-##### Control of RS485 bus DE signal 
- *  @param mode 0 for RS485 Data Transmission Enable Inactive, 1 for Data Transmission Enable Active
- *  @return Returns 0 when succeeded, -1 for unsupported mode
- *  
-`char Controllino_SwitchRS485DE(char mode)`
+`Controllino_RS485RxEnable()`
+
+##### Control of RS485 direction to transmit 
+* Do not forget to wait until all data were transmitted before you switch back to reception
+* You can use Serial3.flush() function for that.
+
+`Controllino_RS485TxEnable()`
 
 ## Installation guide
 
@@ -279,6 +302,8 @@ Question: Pins Digital 20 - Digital 23 seem not to be implemented to use with di
 *Answer: It is correct. Our library does not support these digital outputs as we have tried to do not touch Arduino Core functionality. But it may be a point for further releases...
 I am afraid that you have to use this "PORTD" way to control these pins. Please check example sketch PortManipulation in the Arduino IDE for more details.*
 
+*UPDATE - should be fixed with BSP version 3.0.0. - all CONTROLLINO pins have Arduino number now!*
+
 **4. CONTROLLINO boards not showing with arduino IDE 1.6.12**
 
 Question: Loading the Controllino Library into the Arduino 1.6.12 IDE does not show up the Controllino boards on the board types list.
@@ -306,10 +331,39 @@ Question: I am not using RTC and/or Ethernet built in CONTROLLINO MAXI/MEGA. I a
 *This may cause confusion of the SPI communication at the pinheader and also strange voltages at MISO (pin header X1) when using it as GPIO.*
  
 *These three lines in your sketch setup function should do the job:*
+
+`pinMode(CONTROLLINO_RTC_CHIP_SELECT, OUTPUT);`
+
+`pinMode(CONTROLLINO_ETHERNET_CHIP_SELECT, OUTPUT);`
+
+`digitalWrite(CONTROLLINO_RTC_CHIP_SELECT, LOW);       // inactive`
+
+`digitalWrite(CONTROLLINO_ETHERNET_CHIP_SELECT, HIGH); // inactive`
+
  
-`DDRJ   | = B00001100;` 
+**8. CONTROLLINO MINI A6, A7 inputs**
 
-`PORTJ &= B11111011;`
+Question: It is not possible to read digital value of the A6 and A7 inputs on CONTROLLINO MINI.
 
-`PORTJ | = B00001000;`
+*Answer: These pins are analogue inputs only and it is not possible to read their digital status, because of the microprocessor architecture. The only chance is to read out their analogue value and distinguish by some threshold value.*
 
+**9. CONTROLLINO MAXI Ethernet.localIP() always returns 255.255.255.255**
+
+Issue: I bought a Controllino MAXI and I had difficulties connecting through Ethernet. Ethernet.localIP() always returned 255.255.255.255.
+
+*Solution: The problem was due to the fact that Arduino IDE linked the standard Ethernet library and not Controllino's one (it appeared in the compilation logs of Arduino IDE). Under ArchLinux, I manually replaced /Arduino/libraries/Ethernet by Controllino's Ethernet folder (/.arduino15/packages/CONTROLLINO_Boards/hardware/avr/2.0.1/libraries/Ethernet/src) and it worked.*
+
+*UPDATE - should be fixed with BSP version 3.0.0. - CONTROLLINO uses standard Arduino Ethernet library now!*
+
+**10. There is not possible to upload a new sketch to CONTROLLINO anymore**
+
+Issue: The CONTROLLINO works fine, but after some time (and successfully uploaded sketches), it seems to be bricked. It is not possible to upload any sketch and Arduino IDE reports some kind of avrdude: verification error, or avrdude: stk500_recv(): programmer is not responding. 
+
+*Solution: The problem is not related to CONTROLLINO platform only. It seems to be a general weakness of Arduino IDE, avrdude and original bootloader. It is still not clear what exactly happens, but it seems that after upload of a corrupted binary the microcontroller skips the bootloader when reset during operation.*
+
+Please, try following steps: 
+ - Disconnect the power and USB cable
+ - Press and hold Reset button at CONTROLLINO
+ - Connect USB cable
+ - Press Upload button in Arduino IDE
+ - Release Reset button when “Compiling sketch ...” message changes to “Uploading”

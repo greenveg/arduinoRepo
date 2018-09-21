@@ -11,8 +11,8 @@
  *  https://www.arduino.cc/
  *
  *  @author CONTROLLINO design team
- *  @version   1.1.1
- *  @date      2017-03-21
+ *  @version   3.0.2
+ *  @date      2018-09-20
  *  @bug No known bugs.
  */
 
@@ -163,6 +163,14 @@
  */
 
 #ifdef CONTROLLINO_MAXI
+
+  #define CONTROLLINO_ETHERNET_CHIP_SELECT 70
+  #define CONTROLLINO_ETHERNET_INTERRUPT 71
+  #define CONTROLLINO_RTC_CHIP_SELECT 72
+  #define CONTROLLINO_RTC_INTERRUPT 73
+  #define CONTROLLINO_OVERLOAD 74
+  #define CONTROLLINO_RS485_DE 75
+  #define CONTROLLINO_RS485_nRE 76
 
   #define CONTROLLINO_PIN_HEADER_PWM_00 2
   #define CONTROLLINO_PIN_HEADER_DIGITAL_OUT_00 2
@@ -427,6 +435,12 @@
 
 #ifdef CONTROLLINO_MAXI_AUTOMATION
 
+  #define CONTROLLINO_ETHERNET_CHIP_SELECT 70
+  #define CONTROLLINO_ETHERNET_INTERRUPT 71
+  #define CONTROLLINO_RTC_CHIP_SELECT 72
+  #define CONTROLLINO_RTC_INTERRUPT 73
+  #define CONTROLLINO_OVERLOAD 74
+
   #define CONTROLLINO_PIN_HEADER_PWM_00 2
   #define CONTROLLINO_PIN_HEADER_DIGITAL_OUT_00 2
   #define CONTROLLINO_SCREW_TERMINAL_PWM_00 2
@@ -544,19 +558,16 @@
   #define CONTROLLINO_PIN_HEADER_DIGITAL_ADC_IN_01 55
   #define CONTROLLINO_SCREW_TERMINAL_DIGITAL_ADC_IN_01 55 
   #define CONTROLLINO_SCREW_TERMINAL_ANALOG_ADC_IN_01 55
-  #define CONTROLLINO_PIN_HEADER_DIGITAL_IN_01 55
   
   #define CONTROLLINO_PIN_HEADER_ANALOG_ADC_IN_02 56
   #define CONTROLLINO_PIN_HEADER_DIGITAL_ADC_IN_02 56
   #define CONTROLLINO_SCREW_TERMINAL_DIGITAL_ADC_IN_02 56 
   #define CONTROLLINO_SCREW_TERMINAL_ANALOG_ADC_IN_02 56
-  #define CONTROLLINO_PIN_HEADER_DIGITAL_IN_02 56
   
   #define CONTROLLINO_PIN_HEADER_ANALOG_ADC_IN_03 57
   #define CONTROLLINO_PIN_HEADER_DIGITAL_ADC_IN_03 57
   #define CONTROLLINO_SCREW_TERMINAL_DIGITAL_ADC_IN_03 57 
   #define CONTROLLINO_SCREW_TERMINAL_ANALOG_ADC_IN_03 57
-  #define CONTROLLINO_PIN_HEADER_DIGITAL_IN_03 57
   
   #define CONTROLLINO_PIN_HEADER_ANALOG_ADC_IN_04 58
   #define CONTROLLINO_PIN_HEADER_DIGITAL_ADC_IN_04 58
@@ -639,6 +650,11 @@
   #define CONTROLLINO_A7 61
   #define CONTROLLINO_A8 62
   #define CONTROLLINO_A9 63
+  #define CONTROLLINO_A10 64
+  #define CONTROLLINO_A11 65
+  
+  #define CONTROLLINO_A12 68
+  #define CONTROLLINO_A13 69
   /* END - just for compatibility with the common examples - END */
   
   #define CONTROLLINO_DI0 66
@@ -687,6 +703,14 @@
  */
 
 #ifdef CONTROLLINO_MEGA
+
+  #define CONTROLLINO_ETHERNET_CHIP_SELECT 70
+  #define CONTROLLINO_ETHERNET_INTERRUPT 71
+  #define CONTROLLINO_RTC_CHIP_SELECT 72
+  #define CONTROLLINO_RTC_INTERRUPT 73
+  #define CONTROLLINO_OVERLOAD 74
+  #define CONTROLLINO_RS485_DE 75
+  #define CONTROLLINO_RS485_nRE 76
 
   #define CONTROLLINO_PIN_HEADER_PWM_00 2
   #define CONTROLLINO_PIN_HEADER_DIGITAL_OUT_00 2
@@ -921,6 +945,10 @@
   #define CONTROLLINO_D17 47
   #define CONTROLLINO_D18 48
   #define CONTROLLINO_D19 49
+  #define CONTROLLINO_D20 77
+  #define CONTROLLINO_D21 78
+  #define CONTROLLINO_D22 79
+  #define CONTROLLINO_D23 80
   
   #define CONTROLLINO_A0 54
   #define CONTROLLINO_A1 55
@@ -973,6 +1001,12 @@
  *  @return Always returns 0
  */
 char Controllino_RTC_init(unsigned char aChipSelect);
+
+/** @brief Initializes RTC library, SPI bus and RTC chip (RV-2123)
+ *
+ *  @return Always returns 0
+ */
+char Controllino_RTC_init( void );
 
 /** @brief Sets time and date to the RTC chip (RV-2123)
  *
@@ -1083,6 +1117,24 @@ char Controllino_SetRTCSS(char mode);
  *  @return Always returns 0 
  */
 char Controllino_RS485Init( void );
+
+/** @brief Initialization of the RS485 bus with baudrate
+ *
+ *  @return Always returns 0 
+ */
+char Controllino_RS485Init( long aBaudrate );
+
+/** @brief Enable RS485 bus trasmission 
+ *
+ *  @return void
+ */
+void Controllino_RS485TxEnable( void );
+
+/** @brief Enable RS485 bus reception 
+ *
+ *  @return void
+ */
+void Controllino_RS485RxEnable( void );
 
 /** @brief Control of RS485 bus RE signal 
  *

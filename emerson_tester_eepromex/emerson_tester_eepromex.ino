@@ -32,7 +32,7 @@ unsigned long startTime = 0;
 uint8_t state = 0;
 uint8_t eepromCount = 0;
 unsigned long count = 0;
-unsigned long maxCount = 3000;
+unsigned long maxCount = 10;
 unsigned long minute = 60000;
 int pumpDelay = 1000;
 
@@ -51,15 +51,12 @@ bool countDownMinutesHasRun = false;
 bool waitForMsHasRun = false;
 bool runProgram = false;
 bool runPump = false;
-uint8_t previousDate = 0;
-uint8_t currentDate = 0;
-
 
 
 //Functions
 
 void printDateAndTime() {
-  int n = 0;
+  int n;
   Serial.print("Date and time: ");
   n = Controllino_GetDay();
   Serial.print(n);
@@ -74,7 +71,7 @@ void printDateAndTime() {
   Serial.print(n);
   Serial.print(":");
   n = Controllino_GetMinute();
-  Serial.print(n);
+  Serial.println(n);
 }
 
 void printListOfCommands() {
@@ -92,8 +89,7 @@ void printListOfCommands() {
   Serial.println("zero = writes 0 to address 350 on EEPROM");
   Serial.println("save = writes count to address 350 on EEPROM");
   Serial.println("start = starts emerson test program");
-  Serial.println("pause = pauses program");
-  Serial.println("reset = stops program and resets state");
+  Serial.println("reset = stops and resets program");
   Serial.println("rtc = reads current time and date");
   Serial.println("setDate = set startDate as current date");
   Serial.println("++ = goes to next state in program");
@@ -123,7 +119,6 @@ void countDownMinutes(int m, String message) {
     userMinute--;
   }
 }//end countDownMinutes()
-
 
 void waitForMs(int m) {
   if (!waitForMsHasRun) {
@@ -156,11 +151,8 @@ void setup() {
   //Start serial communication
   Serial.begin(9600);
 
-  previousDate = Controllino_GetDay();
-    
   //Boot sequence
   runProgram = false;
-  //runProgram = true;
 
   Serial.println("...booting");
   printDateAndTime();
@@ -173,23 +165,8 @@ void loop() {
   currentMillis = millis();  
  
   recvWithEndMarker();  //Read serial
-  doStuffWithData();    //Do things with received data, if you want to add a command, edit this func
-
-  if (read1+10 < readSum/4 || read1-10 > readSum/4 || 
-      read2+10 < readSum/4 || read2-10 > readSum/4 ||
-      read3+10 < readSum/4 || read3-10 > readSum/4 ||
-      read4+10 < readSum/4 || read4-10 > readSum/4 ){
-        
-        runProgram = false;
-        digitalWrite(PUMP_RELAY, LOW);
-        digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
-        digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
-        digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
-        digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
-        Serial.println("Error: one or more sensors is out of spec");
-        Serial.print("Cycle: ");
-        Serial.println(count);
-      }
+  doStuffWithData();    //Do things with received data, if you want to add a command, edit this function
+  
   //Program
   if (runProgram) {
     
@@ -197,12 +174,13 @@ void loop() {
       switch (state) {
         case 0:
           printDateAndTime();
+          /*
           Serial.println(' ');
           Serial.print("Cycle ");
           Serial.print(count+1);
           Serial.print("/");
           Serial.println(maxCount);
-          
+          */
           state++;
           break;
      
@@ -212,7 +190,6 @@ void loop() {
           break;
         
         case 2:
-          //Cold circuit
           digitalWrite(LOW_TEMP_IN_VALVE_PIN, HIGH);
           digitalWrite(LOW_TEMP_OUT_VALVE_PIN, HIGH);
           digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
@@ -226,7 +203,7 @@ void loop() {
           break;
 
         case 4:
-          waitForMs(10000);
+          waitForMs(500);
           break;
 
         case 5:
@@ -235,7 +212,6 @@ void loop() {
           break;
      
         case 6:  
-          //Hot circuit
           digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
           digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
           digitalWrite(HIGH_TEMP_IN_VALVE_PIN, HIGH);
@@ -249,19 +225,25 @@ void loop() {
           break;
         
         case 8:
-          waitForMs(10000); 
+          waitForMs(500); 
           break;
          
         case 9:
           count++;
           state = 1;
+          
 
           break;
     
       }//end switch
     }//end count checker if
+    else {
+      Serial.println("Program run finished");
+      runProgram = false;
+    }
+    
 
-    if (currentMillis - previousReadMillis >= 2000) {
+    if (currentMillis - previousReadMillis >= 1000) {
       read1 = analogRead(EMERSON_1);
       read2 = analogRead(EMERSON_2);
       read3 = analogRead(EMERSON_3);
@@ -277,17 +259,27 @@ void loop() {
       Serial.print(read3);
       Serial.print(",");
       Serial.println(read4);
+
+      if (read1+10 < readSum/4 || read1-10 > readSum/4 || 
+        read2+10 < readSum/4 || read2-10 > readSum/4 ||
+        read3+10 < readSum/4 || read3-10 > readSum/4 ||
+        read4+10 < readSum/4 || read4-10 > readSum/4 ) {
+        
+        runProgram = false;
+        digitalWrite(PUMP_RELAY, LOW);
+        digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
+        digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
+        digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
+        digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
+        Serial.println("Error: one or more sensors is out of spec");
+        Serial.print("Cycle: ");
+        Serial.println(count);
+      }
       
       previousReadMillis = currentMillis;
     }
-    
-    else {
-      Serial.println("Program run finished");
-      runProgram = false;
-    }
-    
-  }//end program wrapper
 
+  }//end program wrapper
   
 }//end loop
 
@@ -395,14 +387,6 @@ void doStuffWithData() {
       Serial.println("------------------------------");
       Serial.println("Program started");
     }
-    
-    else if(strcmp(receivedChars, "pause") == 0) {
-      runProgram = false;
-      digitalWrite(PUMP_RELAY, LOW);
-      countDownMinutesHasRun = false;
-      Serial.println("Program stopped");
-      Serial.println("------------------------------");
-    }  
 
     else if(strcmp(receivedChars, "reset") == 0) {
       digitalWrite(PUMP_RELAY, LOW);
@@ -420,12 +404,7 @@ void doStuffWithData() {
     else if(strcmp(receivedChars, "rtc") == 0) {
       printDateAndTime();
     } 
-  
-    else if(strcmp(receivedChars, "setDate") == 0) {
-      previousDate = Controllino_GetDay();
-      Serial.print("Date set to: ");
-      Serial.println(previousDate);
-    }    
+   
     else if(strcmp(receivedChars, "++") == 0) {
       if (runProgram) {
         state++;
