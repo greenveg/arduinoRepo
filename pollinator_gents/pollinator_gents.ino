@@ -1,14 +1,16 @@
-#include <EEPROM.h>
 #include <SPI.h>
 #include <Controllino.h>    //Controllino lib
+#include <EEPROMex.h>
 
 #define PUMP_1_PIN CONTROLLINO_D10
 #define PUMP_2_PIN CONTROLLINO_D11
+#define MIXER_PUMP_1_PIN CONTROLLINO_D9
+#define MIXER_PUMP_2_PIN CONTROLLINO_D8
 
 /*
  * TO DO
- * -add random temp setting in interval 20-43C for every session
- * -add nightly heat treatment  
+ * -add nightly pause  
+ * -add mixer pumps and control
  */
 
 //Serial reading
@@ -19,31 +21,25 @@ boolean newData = false;
 
 //General vars
 uint8_t pumpPwm = 100;
-int maxCount = 10;
+unsigned long maxCount = 10;
+unsigned long count = 0;
+unsigned long minute = 60000;
 
 unsigned long previousMillis = 0; 
 unsigned long currentMillis = 0;
-unsigned long waitStartedMillis = 0;
-unsigned long startTime = 0;
-unsigned long pump1StartTime = 0;
-unsigned long pump1PreviousMillis = 0;
 uint8_t state = 0;
-uint8_t count = 0;
-unsigned int lastHeatCount = 0;
-unsigned long minute = 60000;
 uint8_t userTemp = 0;
 
 bool pump1OnFlag = false;
 bool pump2OnFlag = false;
 
-
-int userMinute = 0;
 bool countDownMinutesHasRun = false;
 bool waitForMsHasRun = false;
+int userMinute = 0;
+unsigned long waitStartedMillis = 0;
+
 bool runProgram = false;
-bool runPump = false;
-uint8_t previousDate = 0;
-uint8_t currentDate = 0;
+
 
 
 
@@ -92,7 +88,6 @@ void printListOfCommands() {
   Serial.println("stop = stops program");
   Serial.println("reset = stops program and resets state");
   Serial.println("rtc = reads current time and date");
-  Serial.println("setDate = set startDate as current date");
   Serial.println("++ = goes to next state in program");
   Serial.println("ON = sends SHOWER ON command on Serial2");
   Serial.println("OFF = sends SHOWER OFF command on Serial2");
@@ -151,17 +146,17 @@ void setup() {
   
   pinMode(PUMP_1_PIN, OUTPUT);
   pinMode(PUMP_2_PIN, OUTPUT);
+  pinMode(MIXER_PUMP_1_PIN, OUTPUT);
+  pinMode(MIXER_PUMP_2_PIN, OUTPUT);
 
   //Start serial communication
   Serial.begin(9600);
   Serial2.begin(115200);
-
-  previousDate = Controllino_GetDay();
     
   //Boot sequence
   runProgram = false;
-
   Serial.println("...booting");
+  Serial.println(__FILE__);
   printDateAndTime();
   printListOfCommands();
   
@@ -192,16 +187,21 @@ void loop() {
         
           Serial2.write("SHOWER ON\n");
           Serial.println("SHOWER ON command was sent to shower");     
-          delay(6000);
+          /*
+          delay(2000);
           Serial2.write("SHOWER ON\n");
           Serial.println("SHOWER ON command was sent to shower"); 
           delay(1000);
-
+          */
           //Calculate a randomized shower temp 
           userTemp = random(21, 24);
           setShowerTemp(userTemp);
           Serial.print("Shower temp set to: ");
           Serial.println(userTemp);
+
+          //Start mixer pumps
+          analogWrite(MIXER_PUMP_1_PIN, 100);
+          analogWrite(MIXER_PUMP_2_PIN, 100);
           
           state++;
           break;
@@ -232,6 +232,11 @@ void loop() {
           
         case 6:
           analogWrite(PUMP_2_PIN, 0);
+          
+          //Stop mixer pumps
+          analogWrite(MIXER_PUMP_1_PIN, 0);
+          analogWrite(MIXER_PUMP_2_PIN, 0);
+          
           state ++;
           break;
     
@@ -242,24 +247,24 @@ void loop() {
          case 8:
           Serial2.write("SHOWER OFF\n"); 
           Serial.println("SHOWER OFF command was sent to shower");
+          /*
           delay(1000);
           Serial2.write("SHOWER OFF\n"); 
           delay(1000);
           Serial2.write("SHOWER OFF\n"); 
-          
+          */
           count++;
           EEPROM.write(4, count);
           
-          if ( (count%10) == 0) {
-            
-            state = 9;  
-          }
-          /*
-          else if ( previousDate+1 == Controllino_GetDay() && Controllino_GetHour == 1) {
+         
+          if ( Controllino_GetHour >= 14 ) {
               Serial.println("7 hours to next session");
               state = 12;  
           }
-          */
+          else if ( (count%10) == 0) { 
+            state = 9;  
+          }
+          
           else {
             state = 10;
           }
@@ -400,14 +405,14 @@ void doStuffWithData() {
     
     
     else if(strcmp(receivedChars, "zero") == 0) {
-      EEPROM.write(4, 0);
       count = 0;
+      EEPROM.writeLong(4, count);
       Serial.println("Address 4 at EEPROM was zeroed");
     }
     
     else if(strcmp(receivedChars, "eeprom") == 0) {
       Serial.print("count = ");
-      Serial.println(EEPROM.read(4));
+      Serial.println(EEPROM.readLong(4));
     }
     
     else if(strcmp(receivedChars, "ON") == 0) {
@@ -441,7 +446,6 @@ void doStuffWithData() {
     
     else if(strcmp(receivedChars, "start") == 0) {
       runProgram = true;
-      //startTime = millis();
       Serial.println("------------------------------");
       Serial.println("Program started");
     }
@@ -464,12 +468,7 @@ void doStuffWithData() {
     else if(strcmp(receivedChars, "rtc") == 0) {
       printDateAndTime();
     } 
-  
-    else if(strcmp(receivedChars, "setDate") == 0) {
-      previousDate = Controllino_GetDay();
-      Serial.print("Date set to: ");
-      Serial.println(previousDate);
-    }    
+   
     else if(strcmp(receivedChars, "++") == 0) {
       if (runProgram) {
         state++;
@@ -479,7 +478,7 @@ void doStuffWithData() {
     }
    
     
-    else if( receivedInt >= 0 && receivedInt <= 255) {
+    else if( receivedInt >= 0 && receivedInt <= 49) {
       setShowerTemp(receivedInt); 
     }
     
@@ -487,7 +486,3 @@ void doStuffWithData() {
    newData = false;
   }
 }
-
-
-
-

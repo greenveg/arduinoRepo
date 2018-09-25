@@ -26,13 +26,14 @@ boolean newData = false;
 unsigned long previousMillis = 0;
 unsigned long previousReadMillis = 0;
 unsigned long currentMillis = 0;
-unsigned long waitStartedMillis = 0;
+
 
 //Global vars used in functions, mainly flags
 int userMinute = 0;
 bool countDownMinutesHasRun = false;
 bool waitForMsHasRun = false;
 bool pumpOnFlag = false;
+unsigned long waitStartedMillis = 0;
 
 //Script vars
 unsigned long minute = 60000;
@@ -217,19 +218,19 @@ void loop() {
       //lastFlow = currentFlow;
 
       currentPressure = analogRead(PRESSURE_PIN)*0.03;
-      //currentTemp = readTemp();
-      //currentFlow= readFlow();
+      currentTemp = readTemp();
+      currentFlow= readFlow();
       
       Serial.print(count);
       Serial.print(",");
       Serial.print(currentPressure);
       Serial.print(",");
       Serial.println(pumpPwm);
-      /*
-      Serial.print(analogRead(TEMP_PIN)*0.03);
+      
+      Serial.print(currentTemp);
       Serial.print(",");
-      Serial.println(analogRead(FLOW_PIN)*0.03);
-      */
+      Serial.println(currentFlow);
+      
     }
 
 
