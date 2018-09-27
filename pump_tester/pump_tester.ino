@@ -2,8 +2,10 @@
 #include <SPI.h>
 #include <Controllino.h>    //Controllino lib
 
-#define PUMP_1_PIN CONTROLLINO_D11
+#define PUMP_1_PIN CONTROLLINO_D6
 #define PUMP_2_PIN CONTROLLINO_D7
+#define LOW_TEMP_OUT_VALVE_PIN CONTROLLINO_D2
+#define LOW_TEMP_IN_VALVE_PIN CONTROLLINO_D3
 
 /* Target for 12.15g cont per liter
  *  Time      ml      pwm guess
@@ -12,8 +14,8 @@
  *  10-15s    100     100
  *  15-20s    50      65
  *  20-25s    35      50
- *  25-30s    25      
- *  30-35s    20
+ *  25-30s    25      42
+ *  30-35s    20      
  *  35-40s    20
  *  40-45s    20
  *  45-50s    20
@@ -48,7 +50,12 @@ uint32_t pumpTime = 5000;
 void setup() {
   pinMode(PUMP_1_PIN, OUTPUT);
   pinMode(PUMP_2_PIN, OUTPUT);
+  pinMode(LOW_TEMP_OUT_VALVE_PIN, OUTPUT);
+  pinMode(LOW_TEMP_IN_VALVE_PIN, OUTPUT);
 
+  digitalWrite(LOW_TEMP_OUT_VALVE_PIN, HIGH);
+  digitalWrite(LOW_TEMP_IN_VALVE_PIN, HIGH);
+  
   //Start serial communication
   Serial.begin(9600);
   Serial.println("...booting");

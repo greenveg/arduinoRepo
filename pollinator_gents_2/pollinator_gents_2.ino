@@ -53,13 +53,17 @@ boolean newData = false;
 uint8_t pumpPwm = 100;
 unsigned long maxCount = 10;
 unsigned long count = 0;
-unsigned long minute = 60000;
+unsigned long minute = 10000;
+uint8_t stopHour = 23;
+uint8_t startHour = 5;
 
 unsigned long previousMillis = 0; 
 unsigned long currentMillis = 0;
 uint8_t state = 0;
 uint8_t subState = 0;
 uint8_t userTemp = 0;
+
+uint8_t pwmArr[7] = {70, 140, 100, 65, 50, 42, 40};
 
 bool pump1OnFlag = false;
 bool pump2OnFlag = false;
@@ -70,7 +74,6 @@ int userMinute = 0;
 unsigned long waitStartedMillis = 0;
 
 bool runProgram = false;
-
 
 
 
@@ -144,7 +147,7 @@ void countDownMinutes(int m, String message) {
   
   if (currentMillis >= waitStartedMillis + m*minute) {
     countDownMinutesHasRun = false;
-    Serial.println("state++");
+    //Serial.println("state++");
     state++;
   }
   else if (userMinute > 0 && currentMillis >= previousMillis + minute) {
@@ -155,7 +158,6 @@ void countDownMinutes(int m, String message) {
   }
 }//end countDownMinutes()
 
-
 void waitForMs(int m, bool sub = false) {
   if (!waitForMsHasRun) {
     waitStartedMillis = millis();
@@ -163,13 +165,63 @@ void waitForMs(int m, bool sub = false) {
   }
   if (millis() >= waitStartedMillis + m) {
     waitForMsHasRun = false;
-    Serial.println("state++");
-    state++;
-    if (!sub) {Serial.println("woopdido");}
+    if (sub) {subState++;} else {state++;}
   }
 }//end countDownMinutes()
 
-
+void pumpDose (int pump) {
+  switch (subState) {
+    case 0:
+      //Serial.println(subState);
+      if (pump == 1) {analogWrite(PUMP_1_PIN, pwmArr[subState]);}
+      else if (pump == 2); {analogWrite(PUMP_2_PIN, pwmArr[subState]);}
+      waitForMs(5000, true);
+      break;
+    case 1:
+      //Serial.println(subState);
+      if (pump == 1) {analogWrite(PUMP_1_PIN, pwmArr[subState]);}
+      else if (pump == 2); {analogWrite(PUMP_2_PIN, pwmArr[subState]);}
+      waitForMs(5000, true);
+      break;
+    case 2:
+      //Serial.println(subState);
+      if (pump == 1) {analogWrite(PUMP_1_PIN, pwmArr[subState]);}
+      else if (pump == 2); {analogWrite(PUMP_2_PIN, pwmArr[subState]);}
+      waitForMs(5000, true);
+      break;
+    case 3:
+      //Serial.println(subState);
+      if (pump == 1) {analogWrite(PUMP_1_PIN, pwmArr[subState]);}
+      else if (pump == 2); {analogWrite(PUMP_2_PIN, pwmArr[subState]);}
+      waitForMs(5000, true);
+      break;
+    case 4:
+      //Serial.println(subState);
+      if (pump == 1) {analogWrite(PUMP_1_PIN, pwmArr[subState]);}
+      else if (pump == 2); {analogWrite(PUMP_2_PIN, pwmArr[subState]);}
+      waitForMs(5000, true);
+      break;
+    case 5:
+      //Serial.println(subState);
+      if (pump == 1) {analogWrite(PUMP_1_PIN, pwmArr[subState]);}
+      else if (pump == 2); {analogWrite(PUMP_2_PIN, pwmArr[subState]);}
+      waitForMs(5000, true);
+      break;
+    case 6:
+      //Serial.println(subState);
+      if (pump == 1) {analogWrite(PUMP_1_PIN, pwmArr[subState]);}
+      else if (pump == 2); {analogWrite(PUMP_2_PIN, pwmArr[subState]);}
+      waitForMs(5000*6, true);
+      break;
+    case 7:
+      analogWrite(PUMP_1_PIN, 0);
+      analogWrite(PUMP_2_PIN, 0);
+      subState = 0;
+      state++;
+      break;
+    
+  }//end subswitch
+}//end pumpDose()
 
 void setup() {
   Controllino_RTC_init(0);
@@ -242,15 +294,13 @@ void loop() {
           countDownMinutes(2, " minutes to shampoo");       
           break;
           
-        case 2:      
-          analogWrite(PUMP_1_PIN, 100);
-          waitForMs(10000);
-          
+        case 2:   
+          Serial.println("Schampoo dose started");   
+          state++;
           break;
         
         case 3:
-            analogWrite(PUMP_1_PIN, 0);
-            state ++;
+          pumpDose(1);  
           break;      
     
         case 4:
@@ -258,18 +308,12 @@ void loop() {
           break;  
     
         case 5:
-          analogWrite(PUMP_2_PIN, 75);
-          waitForMs(7000);        
+          Serial.println("Conditioner dose started");
+          state ++;     
           break;  
           
         case 6:
-          analogWrite(PUMP_2_PIN, 0);
-          
-          //Stop mixer pumps
-          analogWrite(MIXER_PUMP_1_PIN, 0);
-          analogWrite(MIXER_PUMP_2_PIN, 0);
-          
-          state ++;
+          pumpDose(2); 
           break;
     
         case 7:
@@ -277,6 +321,10 @@ void loop() {
           break; 
   
          case 8:
+          //Stop mixer pumps
+          analogWrite(MIXER_PUMP_1_PIN, 0);
+          analogWrite(MIXER_PUMP_2_PIN, 0);
+          
           Serial2.write("SHOWER OFF\n"); 
           Serial.println("SHOWER OFF command was sent to shower");
           /*
@@ -288,12 +336,11 @@ void loop() {
           count++;
           EEPROM.write(4, count);
           
-         
-          if ( Controllino_GetHour >= 14 ) {
-              Serial.println("7 hours to next session");
+          
+          if ( Controllino_GetHour() >= stopHour ) {
               state = 12;  
           }
-          else if ( (count%10) == 0) { 
+          else if ( (count%3) == 0) { 
             state = 9;  
           }
           
@@ -321,7 +368,7 @@ void loop() {
           break;
           
         case 12:
-          countDownMinutes(7*60, " ");
+          if (Controllino_GetHour() >= startHour) {state++;}
           break;
 
        case 13: 
@@ -510,7 +557,7 @@ void doStuffWithData() {
     }
    
     
-    else if( receivedInt >= 0 && receivedInt <= 49) {
+    else if( receivedInt >= 1 && receivedInt <= 49) {
       setShowerTemp(receivedInt); 
     }
     
