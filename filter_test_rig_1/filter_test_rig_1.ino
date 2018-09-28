@@ -19,7 +19,7 @@
 double maxPressure = 4.5;
 double errorPressure = 6;
 const uint16_t restAtPressureMs = 1000;
-unsigned long maxCount = 100;
+unsigned long maxCount = 1000;
 
 
 //Serial reading
@@ -157,7 +157,6 @@ void countDownMinutes(int m, String message) {
     userMinute--;
   }
 }//end countDownMinutes()
-
 
 void waitForMs(int m) {
   if (!waitForMsHasRun) {
@@ -397,8 +396,7 @@ void doStuffWithData() {
     }
 
     else if (strcmp(receivedChars, "reset") == 0) {
-      analogWrite(PUMP_PWM_PIN, 0);
-
+      pumpPwm = 0;
       runProgram = false;
       countDownMinutesHasRun = false;
       state = 0;

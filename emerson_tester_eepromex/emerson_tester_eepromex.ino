@@ -136,6 +136,20 @@ void waitForMs(int m) {
 }//end countDownMinutes()
 
 
+void shiftToCold() {          
+  digitalWrite(LOW_TEMP_IN_VALVE_PIN, HIGH);
+  digitalWrite(LOW_TEMP_OUT_VALVE_PIN, HIGH);
+  digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
+  digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
+}
+
+void shiftToHot() {          
+  digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
+  digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
+  digitalWrite(HIGH_TEMP_IN_VALVE_PIN, HIGH);
+  digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, HIGH);
+}
+
 
 void setup() {
   Controllino_RTC_init(0);
@@ -189,54 +203,51 @@ void loop() {
           break;
      
         case 1:        
-          digitalWrite(PUMP_PWM_PIN, 0);
+          analogWrite(PUMP_PWM_PIN, 0);
           waitForMs(pumpDelay);
           break;
-        
         case 2:
-          digitalWrite(LOW_TEMP_IN_VALVE_PIN, HIGH);
-          digitalWrite(LOW_TEMP_OUT_VALVE_PIN, HIGH);
           digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
           digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
-          waitForMs(pumpDelay);
+          waitForMs(500);
           break;
 
         case 3:
-          analogWrite(PUMP_PWM_PIN, 150);
-          state++;
+          digitalWrite(LOW_TEMP_IN_VALVE_PIN, HIGH);
+          digitalWrite(LOW_TEMP_OUT_VALVE_PIN, HIGH);
+          waitForMs(500);
           break;
 
         case 4:
+          analogWrite(PUMP_PWM_PIN, pumpPwm);
           waitForMs(5000);
           break;
 
         case 5:
           digitalWrite(PUMP_PWM_PIN, 0);      
-          waitForMs(pumpDelay);
+          waitForMs(500);
           break;
      
         case 6:  
           digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
           digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
-          digitalWrite(HIGH_TEMP_IN_VALVE_PIN, HIGH);
-          digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, HIGH);
-          waitForMs(pumpDelay);
+          waitForMs(500);
           break;
         
         case 7:
-          analogWrite(PUMP_PWM_PIN, pumpPwm);  
-          state++;
+          digitalWrite(HIGH_TEMP_IN_VALVE_PIN, HIGH);
+          digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, HIGH);
+          waitForMs(500);
           break;
         
         case 8:
+          analogWrite(PUMP_PWM_PIN, pumpPwm);  
           waitForMs(5000); 
           break;
          
         case 9:
           count++;
           state = 1;
-          
-
           break;
     
       }//end switch
@@ -355,20 +366,12 @@ void doStuffWithData() {
     }
 
     else if(strcmp(receivedChars, "cold") == 0) {
-      digitalWrite(LOW_TEMP_IN_VALVE_PIN, HIGH);
-      digitalWrite(LOW_TEMP_OUT_VALVE_PIN, HIGH);
-      digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
-      digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
-    
+      shiftToCold();
       Serial.println("Cold circuit open");
     }
     
     else if(strcmp(receivedChars, "hot") == 0) {
-      digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
-      digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
-      digitalWrite(HIGH_TEMP_IN_VALVE_PIN, HIGH);
-      digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, HIGH);
-      
+      shiftToHot();
       Serial.println("Hot circuit open");
     }
    
