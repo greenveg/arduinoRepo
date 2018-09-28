@@ -7,7 +7,8 @@
 #define HIGH_TEMP_OUT_VALVE_PIN CONTROLLINO_D1
 #define LOW_TEMP_IN_VALVE_PIN CONTROLLINO_D3
 #define HIGH_TEMP_IN_VALVE_PIN CONTROLLINO_D0
-#define PUMP_RELAY CONTROLLINO_R5
+#define PUMP_PWM_PIN CONTROLLINO_D6
+
 #define EMERSON_1 CONTROLLINO_A0
 #define EMERSON_2 CONTROLLINO_A1
 #define EMERSON_3 CONTROLLINO_A2
@@ -20,21 +21,23 @@ char receivedChars[numChars]; // an array to store the received data
 int receivedInt;
 boolean newData = false;
 
-unsigned int eepromCountAddr = 350;
+//User settings
+uint8_t pumpPwm = 100;
+uint32_t pumpDelay = 1000;
+uint32_t maxCount = 100     ;
 
 //General vars
 unsigned long previousMillis = 0; 
 unsigned long previousReadMillis = 0; 
 unsigned long currentMillis = 0;
 unsigned long waitStartedMillis = 0;
+unsigned int eepromCountAddr = 350;
 
 unsigned long startTime = 0;
 uint8_t state = 0;
 uint8_t eepromCount = 0;
 unsigned long count = 0;
-unsigned long maxCount = 10;
 unsigned long minute = 60000;
-int pumpDelay = 1000;
 
 int read1 = 0;
 int read2 = 0;
@@ -81,8 +84,8 @@ void printListOfCommands() {
   Serial.println(' ');
   Serial.println("list = list all commands");
   Serial.println("pump = turns pump on or off");
-  Serial.println("openAll = opens all valves");
-  Serial.println("clsoeAll = closes all valves");
+  Serial.println("open = opens all valves");
+  Serial.println("close = closes all valves");
   Serial.println("cold = opens cold circuit and closes hot");
   Serial.println("hot = opens hot circuit and closes cold");
   Serial.println("eeprom = reads address 350 on EEPROM");
@@ -93,6 +96,7 @@ void printListOfCommands() {
   Serial.println("rtc = reads current time and date");
   Serial.println("setDate = set startDate as current date");
   Serial.println("++ = goes to next state in program");
+  Serial.println("[number between 0 and 255] runs pumpPwm");
   Serial.println(' ');
 }
 
@@ -138,7 +142,7 @@ void setup() {
 
   eepromCount = EEPROM.read(4);
 
-  pinMode(PUMP_RELAY, OUTPUT);
+  pinMode(PUMP_PWM_PIN, OUTPUT);
   pinMode(LOW_TEMP_OUT_VALVE_PIN, OUTPUT);
   pinMode(HIGH_TEMP_OUT_VALVE_PIN, OUTPUT);
   pinMode(LOW_TEMP_IN_VALVE_PIN, OUTPUT);
@@ -185,7 +189,7 @@ void loop() {
           break;
      
         case 1:        
-          digitalWrite(PUMP_RELAY, LOW);
+          digitalWrite(PUMP_PWM_PIN, 0);
           waitForMs(pumpDelay);
           break;
         
@@ -198,16 +202,16 @@ void loop() {
           break;
 
         case 3:
-          digitalWrite(PUMP_RELAY, HIGH);
+          analogWrite(PUMP_PWM_PIN, 150);
           state++;
           break;
 
         case 4:
-          waitForMs(500);
+          waitForMs(5000);
           break;
 
         case 5:
-          digitalWrite(PUMP_RELAY, LOW);      
+          digitalWrite(PUMP_PWM_PIN, 0);      
           waitForMs(pumpDelay);
           break;
      
@@ -220,12 +224,12 @@ void loop() {
           break;
         
         case 7:
-          digitalWrite(PUMP_RELAY, HIGH);  
+          analogWrite(PUMP_PWM_PIN, pumpPwm);  
           state++;
           break;
         
         case 8:
-          waitForMs(500); 
+          waitForMs(5000); 
           break;
          
         case 9:
@@ -239,6 +243,11 @@ void loop() {
     }//end count checker if
     else {
       Serial.println("Program run finished");
+      analogWrite(PUMP_PWM_PIN, 0);
+      digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
+      digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
+      digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
+      digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
       runProgram = false;
     }
     
@@ -266,7 +275,7 @@ void loop() {
         read4+10 < readSum/4 || read4-10 > readSum/4 ) {
         
         runProgram = false;
-        digitalWrite(PUMP_RELAY, LOW);
+        digitalWrite(PUMP_PWM_PIN, 0);
         digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
         digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
         digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
@@ -319,16 +328,16 @@ void doStuffWithData() {
     
     else if(strcmp(receivedChars, "pump") == 0) {
       if (pumpOnFlag == false) {
-        digitalWrite(PUMP_RELAY, HIGH);
+        analogWrite(PUMP_PWM_PIN, pumpPwm);
         pumpOnFlag = true;
       }
       else if (pumpOnFlag == true) {
-        analogWrite(PUMP_RELAY, 0);
+        analogWrite(PUMP_PWM_PIN, 0);
         pumpOnFlag = false;
       }
     }
     
-    else if(strcmp(receivedChars, "closeAll") == 0) {
+    else if(strcmp(receivedChars, "close") == 0) {
         digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
         digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
         digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
@@ -336,7 +345,7 @@ void doStuffWithData() {
         Serial.println("All valve pins set to low");
     }
 
-    else if(strcmp(receivedChars, "openAll") == 0) {
+    else if(strcmp(receivedChars, "open") == 0) {
         digitalWrite(LOW_TEMP_IN_VALVE_PIN, HIGH);
         digitalWrite(LOW_TEMP_OUT_VALVE_PIN, HIGH);
         digitalWrite(HIGH_TEMP_IN_VALVE_PIN, HIGH);
@@ -389,7 +398,7 @@ void doStuffWithData() {
     }
 
     else if(strcmp(receivedChars, "reset") == 0) {
-      digitalWrite(PUMP_RELAY, LOW);
+      digitalWrite(PUMP_PWM_PIN, LOW);
       digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
       digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
       digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
@@ -404,7 +413,7 @@ void doStuffWithData() {
     else if(strcmp(receivedChars, "rtc") == 0) {
       printDateAndTime();
     } 
-   
+    
     else if(strcmp(receivedChars, "++") == 0) {
       if (runProgram) {
         state++;
@@ -415,12 +424,9 @@ void doStuffWithData() {
     }
    
     
-    else if( receivedInt >= 400 && receivedInt <= 3000) {
-      //EEPROM.writeLong(eepromCountAddr, receivedInt);
-      
-      pumpDelay = receivedInt;
-      Serial.print("pumpDelay set to: ");
-      Serial.println(pumpDelay);
+    else if( receivedInt >= 0 && receivedInt <= 255) {
+      pumpPwm = receivedInt;
+      analogWrite(PUMP_PWM_PIN, pumpPwm);
     }
     
   
