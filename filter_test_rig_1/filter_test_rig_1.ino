@@ -15,6 +15,12 @@
 //https://www.olimex.com/Products/Robot-CNC-Parts/MotorDrivers/BB-VNH3SP30/open-source-hardware
 
 
+//User settings
+double maxPressure = 4.5;
+double errorPressure = 6;
+const uint16_t restAtPressureMs = 1000;
+unsigned long maxCount = 100;
+
 
 //Serial reading
 const byte numChars = 32;
@@ -40,7 +46,6 @@ unsigned long minute = 60000;
 uint8_t state = 0;
 uint8_t errorState = 99;
 unsigned long count = 0;
-unsigned long maxCount = 100;
 uint8_t eepromCount = 0;
 const unsigned int eepromCountAddr = 350;
 unsigned long pumpStartedMillis = 0;
@@ -53,10 +58,6 @@ double lastFlow = 0;
 double currentTemp = 0;
 double lastTemp = 0;
 
-//double pressure[10] = {1.19, 2,37
-
-double maxPressure = 3.5;
-const uint16_t restAtPressureMs = 1000;
 
 
 //Functions
@@ -203,7 +204,11 @@ void setup() {
 void loop() {
   currentMillis = millis();
 
-  analogWrite(PUMP_PWM_PIN, pumpPwm);
+  if (currentPressure > errorPressure) {
+    Serial.println("errorPressure reached! Shutting down!");
+  }
+  else { analogWrite(PUMP_PWM_PIN, pumpPwm); }
+  
   recvWithEndMarker();  //Read serial
   doStuffWithData();    //Do things with received data, if you want to add a command, edit this func
 
@@ -226,11 +231,11 @@ void loop() {
       Serial.print(currentPressure);
       Serial.print(",");
       Serial.println(pumpPwm);
-      
+      /*
       Serial.print(currentTemp);
       Serial.print(",");
       Serial.println(currentFlow);
-      
+      */
     }
 
 
@@ -262,9 +267,9 @@ void loop() {
             state = 3;
           }
           else if (pumpPwm >= 255 && currentPressure <= maxPressure && lastPressure <= maxPressure) {
-            Serial.println("Pressure could not be reached, retrying");
+            Serial.println("Pressure could not be reached, going to shutdown");
             pumpPwm = 0;
-            //analogWrite(PUMP_PWM_PIN, pumpPwm);
+            state = 99;
           }
           else if (currentPressure >= maxPressure && lastPressure >= maxPressure) {
             Serial.println("Pressure reached");
@@ -298,8 +303,7 @@ void loop() {
           count++;
           state = 2;
           break;
-        case 99:
-          
+        case 99://error state
           break; 
 
       }//end switch
