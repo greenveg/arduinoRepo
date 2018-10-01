@@ -173,6 +173,7 @@ void setup() {
   runProgram = false;
 
   Serial.println("...booting");
+  Serial.println("Emerson tester");
   printDateAndTime();
   printListOfCommands();
   
@@ -199,12 +200,16 @@ void loop() {
           Serial.print("/");
           Serial.println(maxCount);
           */
+          digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
+          digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
+          digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
+          digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
           state++;
           break;
      
         case 1:        
           analogWrite(PUMP_PWM_PIN, 0);
-          waitForMs(pumpDelay);
+          waitForMs(500);
           break;
         case 2:
           digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
@@ -349,10 +354,7 @@ void doStuffWithData() {
     }
     
     else if(strcmp(receivedChars, "close") == 0) {
-        digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
-        digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
-        digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
-        digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
+
         Serial.println("All valve pins set to low");
     }
 
