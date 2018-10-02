@@ -1,8 +1,6 @@
 /*
  * TO DO
- * add nightly pause  
- * add mixer pumps and control
- * add pwm control so that target ml/min is reached
+ * double check dosage
  * 
  * TARGET
  * Target for 12.15g cont per liter
@@ -43,6 +41,15 @@
 #define MIXER_PUMP_2_PIN CONTROLLINO_D8
 
 
+
+//User settings
+uint8_t pumpPwm = 100;
+unsigned long maxCount = 10;
+uint8_t stopHour = 23;
+uint8_t startHour = 5;
+uint8_t pwmArr[7] = {70, 140, 100, 65, 50, 42, 40};
+bool runProgram = false;
+
 //Serial reading
 const byte numChars = 32;
 char receivedChars[numChars]; // an array to store the received data
@@ -50,30 +57,20 @@ int receivedInt;
 boolean newData = false;
 
 //General vars
-uint8_t pumpPwm = 100;
-unsigned long maxCount = 10;
-unsigned long count = 0;
-unsigned long minute = 10000;
-uint8_t stopHour = 23;
-uint8_t startHour = 5;
-
 unsigned long previousMillis = 0; 
 unsigned long currentMillis = 0;
 uint8_t state = 0;
 uint8_t subState = 0;
 uint8_t userTemp = 0;
-
-uint8_t pwmArr[7] = {70, 140, 100, 65, 50, 42, 40};
-
 bool pump1OnFlag = false;
 bool pump2OnFlag = false;
-
 bool countDownMinutesHasRun = false;
 bool waitForMsHasRun = false;
 int userMinute = 0;
 unsigned long waitStartedMillis = 0;
-
-bool runProgram = false;
+unsigned long minute = 10000;
+unsigned long count = 0;
+const unsigned int eepromCountAddr = 400;
 
 
 
@@ -105,10 +102,13 @@ void printDateAndTime() {
   Serial.print(n);
   Serial.print(":");
   n = Controllino_GetMinute();
-  Serial.print(n);
+  Serial.println(n);
 }
 
 void printListOfCommands() {
+  String nameStr = __FILE__ ;
+
+  Serial.println(nameStr.substring(nameStr.lastIndexOf('/')+1));
   Serial.println(' ');
   Serial.println("PLEASE NOTE: line ending should be CR only!");
   Serial.println("Available commands:");
@@ -226,7 +226,7 @@ void pumpDose (int pump) {
 void setup() {
   Controllino_RTC_init(0);
 
-  count = EEPROM.read(4);
+  count = EEPROM.readLong(eepromCountAddr);
   
   pinMode(PUMP_1_PIN, OUTPUT);
   pinMode(PUMP_2_PIN, OUTPUT);
@@ -240,7 +240,6 @@ void setup() {
   //Boot sequence
   runProgram = false;
   Serial.println("...booting");
-  Serial.println(__FILE__);
   printDateAndTime();
   printListOfCommands();
   
@@ -253,14 +252,12 @@ void loop() {
   recvWithEndMarker();  //Read serial
   doStuffWithData();    //Do things with received data, if you want to add a command, edit this func
 
-
-
   //Program
   if (runProgram) {
     if (count < maxCount) {
       switch (state) {
         case 0:
-          Serial.println("Inside state 0, this state contains blocking delays!");
+          //Serial.println("Inside state 0, this state contains blocking delays!");
           printDateAndTime();
           Serial.println(' ');
           Serial.print("Session ");
@@ -277,7 +274,8 @@ void loop() {
           Serial.println("SHOWER ON command was sent to shower"); 
           delay(1000);
           */
-          //Calculate a randomized shower temp 
+          
+          //Calculate and set a randomized shower temp
           userTemp = random(21, 24);
           setShowerTemp(userTemp);
           Serial.print("Shower temp set to: ");
@@ -334,7 +332,7 @@ void loop() {
           Serial2.write("SHOWER OFF\n"); 
           */
           count++;
-          EEPROM.write(4, count);
+          EEPROM.writeLong(eepromCountAddr, count);
           
           
           if ( Controllino_GetHour() >= stopHour ) {
@@ -352,9 +350,10 @@ void loop() {
         case 9:
           Serial2.write("OUTER_HOT_WATER_TREATMENT_TRIGGERED\n");
           Serial.println("Ext. heat treat. command was sent to shower");
+          /*
           delay(1000);
           Serial2.write("OUTER_HOT_WATER_TREATMENT_TRIGGERED\n");
-          
+          */
           state++;
           break;
           
@@ -480,18 +479,16 @@ void doStuffWithData() {
         pump2OnFlag = false;
       }
     }
-
-    
     
     else if(strcmp(receivedChars, "zero") == 0) {
       count = 0;
-      EEPROM.writeLong(4, count);
+      EEPROM.writeLong(eepromCountAddr, count);
       Serial.println("Address 4 at EEPROM was zeroed");
     }
     
     else if(strcmp(receivedChars, "eeprom") == 0) {
       Serial.print("count = ");
-      Serial.println(EEPROM.readLong(4));
+      Serial.println(EEPROM.readLong(eepromCountAddr));
     }
     
     else if(strcmp(receivedChars, "ON") == 0) {
