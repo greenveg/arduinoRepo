@@ -16,7 +16,7 @@
 
 
 //User settings
-double maxPressure = 4.5;
+double maxPressure = 5.5;
 double errorPressure = 6;
 const uint16_t restAtPressureMs = 1000;
 unsigned long maxCount = 1000;

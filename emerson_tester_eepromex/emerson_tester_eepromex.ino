@@ -3,10 +3,10 @@
 #include <EEPROMex.h>
 //#include "Arduino.h"
 
-#define LOW_TEMP_OUT_VALVE_PIN CONTROLLINO_D2
-#define HIGH_TEMP_OUT_VALVE_PIN CONTROLLINO_D1
-#define LOW_TEMP_IN_VALVE_PIN CONTROLLINO_D3
-#define HIGH_TEMP_IN_VALVE_PIN CONTROLLINO_D0
+#define COLD_OUT_PIN CONTROLLINO_D2
+#define HOT_OUT_PIN CONTROLLINO_D1
+#define COLD_IN_PIN CONTROLLINO_D3
+#define HOT_IN_PIN CONTROLLINO_D0
 #define PUMP_PWM_PIN CONTROLLINO_D6
 
 #define EMERSON_1 CONTROLLINO_A0
@@ -24,7 +24,7 @@ boolean newData = false;
 //User settings
 uint8_t pumpPwm = 100;
 uint32_t pumpDelay = 1000;
-uint32_t maxCount = 100     ;
+uint32_t maxCount = 400     ;
 
 //General vars
 unsigned long previousMillis = 0; 
@@ -136,19 +136,15 @@ void waitForMs(int m) {
 }//end countDownMinutes()
 
 
-void shiftToCold() {          
-  digitalWrite(LOW_TEMP_IN_VALVE_PIN, HIGH);
-  digitalWrite(LOW_TEMP_OUT_VALVE_PIN, HIGH);
-  digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
-  digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
+void valveControl(bool cold_in, bool hot_in, bool cold_out, bool hot_out) {
+  digitalWrite(COLD_IN_PIN, cold_in);
+  digitalWrite(HOT_IN_PIN, hot_in);
+  digitalWrite(COLD_OUT_PIN, cold_out);
+  digitalWrite(HOT_OUT_PIN, hot_out);
 }
 
-void shiftToHot() {          
-  digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
-  digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
-  digitalWrite(HIGH_TEMP_IN_VALVE_PIN, HIGH);
-  digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, HIGH);
-}
+
+
 
 
 void setup() {
@@ -157,10 +153,10 @@ void setup() {
   eepromCount = EEPROM.read(4);
 
   pinMode(PUMP_PWM_PIN, OUTPUT);
-  pinMode(LOW_TEMP_OUT_VALVE_PIN, OUTPUT);
-  pinMode(HIGH_TEMP_OUT_VALVE_PIN, OUTPUT);
-  pinMode(LOW_TEMP_IN_VALVE_PIN, OUTPUT);
-  pinMode(HIGH_TEMP_IN_VALVE_PIN, OUTPUT);
+  pinMode(COLD_OUT_PIN, OUTPUT);
+  pinMode(HOT_OUT_PIN, OUTPUT);
+  pinMode(COLD_OUT_PIN, OUTPUT);
+  pinMode(HOT_OUT_PIN, OUTPUT);
   pinMode(EMERSON_1, INPUT);
   pinMode(EMERSON_2, INPUT);
   pinMode(EMERSON_3, INPUT);
@@ -193,77 +189,47 @@ void loop() {
       switch (state) {
         case 0:
           printDateAndTime();
-          /*
-          Serial.println(' ');
-          Serial.print("Cycle ");
-          Serial.print(count+1);
-          Serial.print("/");
-          Serial.println(maxCount);
-          */
-          digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
-          digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
-          digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
-          digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
+          
+          valveControl(0, 0, 0, 0);
           state++;
           break;
-     
-        case 1:        
-          analogWrite(PUMP_PWM_PIN, 0);
-          waitForMs(500);
-          break;
-        case 2:
-          digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
-          digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
-          waitForMs(500);
-          break;
-
-        case 3:
-          digitalWrite(LOW_TEMP_IN_VALVE_PIN, HIGH);
-          digitalWrite(LOW_TEMP_OUT_VALVE_PIN, HIGH);
-          waitForMs(500);
-          break;
-
-        case 4:
+    
+        case 1:
+          //Cold cycle
           analogWrite(PUMP_PWM_PIN, pumpPwm);
+          valveControl(1, 0, 1, 0);
           waitForMs(5000);
           break;
 
-        case 5:
-          digitalWrite(PUMP_PWM_PIN, 0);      
-          waitForMs(500);
+        case 2:
+          //Bleed in hot water
+          valveControl(0, 1, 1, 0);
+          waitForMs(1000);
+          break;
+
+        case 3:
+          //Hot cycle
+          valveControl(0, 1, 0, 1);
+          waitForMs(5000);
+          break;
+
+        case 4:
+          //Bleed in cold water
+          valveControl(1, 0, 0, 1);
+          waitForMs(650);
           break;
      
-        case 6:  
-          digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
-          digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
-          waitForMs(500);
-          break;
-        
-        case 7:
-          digitalWrite(HIGH_TEMP_IN_VALVE_PIN, HIGH);
-          digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, HIGH);
-          waitForMs(500);
-          break;
-        
-        case 8:
-          analogWrite(PUMP_PWM_PIN, pumpPwm);  
-          waitForMs(5000); 
-          break;
-         
-        case 9:
+        case 5:
           count++;
           state = 1;
           break;
-    
+          
       }//end switch
     }//end count checker if
     else {
       Serial.println("Program run finished");
       analogWrite(PUMP_PWM_PIN, 0);
-      digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
-      digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
-      digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
-      digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
+      valveControl(0, 0, 0, 0);
       runProgram = false;
     }
     
@@ -292,10 +258,7 @@ void loop() {
         
         runProgram = false;
         digitalWrite(PUMP_PWM_PIN, 0);
-        digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
-        digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
-        digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
-        digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
+        valveControl(0, 0, 0, 0);
         Serial.println("Error: one or more sensors is out of spec");
         Serial.print("Cycle: ");
         Serial.println(count);
@@ -354,26 +317,22 @@ void doStuffWithData() {
     }
     
     else if(strcmp(receivedChars, "close") == 0) {
-
+        valveControl(0, 0, 0, 0);
         Serial.println("All valve pins set to low");
     }
 
     else if(strcmp(receivedChars, "open") == 0) {
-        digitalWrite(LOW_TEMP_IN_VALVE_PIN, HIGH);
-        digitalWrite(LOW_TEMP_OUT_VALVE_PIN, HIGH);
-        digitalWrite(HIGH_TEMP_IN_VALVE_PIN, HIGH);
-        digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, HIGH);
-        
+        valveControl(1, 1, 1, 1);
         Serial.println("All valve pins set to high");
     }
 
     else if(strcmp(receivedChars, "cold") == 0) {
-      shiftToCold();
+      valveControl(1, 0, 1, 0);
       Serial.println("Cold circuit open");
     }
     
     else if(strcmp(receivedChars, "hot") == 0) {
-      shiftToHot();
+      valveControl(0, 1, 0, 1);
       Serial.println("Hot circuit open");
     }
    
@@ -404,10 +363,7 @@ void doStuffWithData() {
 
     else if(strcmp(receivedChars, "reset") == 0) {
       digitalWrite(PUMP_PWM_PIN, LOW);
-      digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
-      digitalWrite(HIGH_TEMP_OUT_VALVE_PIN, LOW);
-      digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
-      digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
+      valveControl(0, 0, 0, 0);
       runProgram = false;
       countDownMinutesHasRun = false;
       state = 0;
