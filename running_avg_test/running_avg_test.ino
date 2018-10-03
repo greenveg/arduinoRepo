@@ -34,12 +34,13 @@ void printIntArray(uint16_t array[numberOfSensors]) {
 }
 
 void insertToMatrix(uint16_t current[numberOfSensors]) {
+  //Shift values one row down
   for (int i=2 ; i>=0 ; i--) {
     for (int k=0 ; k<4 ; k++) {
       sensorReadings[i+1][k] = sensorReadings[i][k];
     } 
   }
-
+  //Insert new values at first row
   for (int i=0 ; i<4 ; i++) {
     sensorReadings[0][i] = current[i];
   } 
