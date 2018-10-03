@@ -24,7 +24,9 @@ boolean newData = false;
 //User settings
 uint8_t pumpPwm = 100;
 uint32_t pumpDelay = 1000;
-uint32_t maxCount = 100     ;
+uint32_t maxCount = 50     ;
+uint32_t readTimer = 500;
+ 
 
 //General vars
 unsigned long previousMillis = 0; 
@@ -39,21 +41,22 @@ uint8_t eepromCount = 0;
 unsigned long count = 0;
 unsigned long minute = 60000;
 
-int read1 = 0;
-int read2 = 0;
-int read3 = 0;
-int read4 = 0;
-int readSum = 0;
-
-
 bool pumpOnFlag = false;
-
-
 int userMinute = 0; //global var needed in countDownMinutes()
 bool countDownMinutesHasRun = false;
 bool waitForMsHasRun = false;
 bool runProgram = false;
 bool runPump = false;
+
+//Sensor data handling
+const int numberOfSensors = 4;
+const int numberOfSavedValues = 4;
+uint16_t sensorReadings[numberOfSavedValues][numberOfSensors];
+uint16_t runningSum[numberOfSensors];
+double runningSumDouble[numberOfSensors];
+double runningAvg[numberOfSensors];
+double momAvg;
+
 
 
 //Functions
@@ -135,7 +138,6 @@ void waitForMs(int m) {
   }
 }//end countDownMinutes()
 
-
 void shiftToCold() {          
   digitalWrite(LOW_TEMP_IN_VALVE_PIN, HIGH);
   digitalWrite(LOW_TEMP_OUT_VALVE_PIN, HIGH);
@@ -193,13 +195,16 @@ void loop() {
       switch (state) {
         case 0:
           printDateAndTime();
-          /*
-          Serial.println(' ');
-          Serial.print("Cycle ");
-          Serial.print(count+1);
-          Serial.print("/");
-          Serial.println(maxCount);
-          */
+          Serial.print("cycle\t");
+          Serial.print("s1\t");
+          Serial.print("s1Avg\t");
+          Serial.print("s2\t");
+          Serial.print("s2Avg\t");
+          Serial.print("s3\t");
+          Serial.print("s3Avg\t");
+          Serial.print("s4\t");
+          Serial.print("s4Avg\t");
+          Serial.println("Mom. avg");
           digitalWrite(LOW_TEMP_IN_VALVE_PIN, LOW);
           digitalWrite(LOW_TEMP_OUT_VALVE_PIN, LOW);
           digitalWrite(HIGH_TEMP_IN_VALVE_PIN, LOW);
@@ -268,27 +273,57 @@ void loop() {
     }
     
 
-    if (currentMillis - previousReadMillis >= 1000) {
-      read1 = analogRead(EMERSON_1);
-      read2 = analogRead(EMERSON_2);
-      read3 = analogRead(EMERSON_3);
-      read4 = analogRead(EMERSON_4);
-      readSum = read1+read2+read3+read4;
+    if (currentMillis - previousReadMillis >= readTimer) {
+    
+      //Shift values one row down
+      for (int i=2 ; i>=0 ; i--) {
+        for (int k=0 ; k<4 ; k++) {
+          sensorReadings[i+1][k] = sensorReadings[i][k];
+        } 
+      }
+
+      //Insert new values
+      sensorReadings[0][0] = analogRead(CONTROLLINO_A0);
+      sensorReadings[0][1] = analogRead(CONTROLLINO_A1);
+      sensorReadings[0][2] = analogRead(CONTROLLINO_A2);
+      sensorReadings[0][3] = analogRead(CONTROLLINO_A3);
+    
+      //Calculate running sums and averages
+      for (int k = 0 ; k<numberOfSensors ; k++) {
+        for (int i = 0 ; i<numberOfSavedValues ; i++) {
+          runningSum[k] += sensorReadings[i][k];
+        }
+      }
+      
+      for (int i = 0 ; i<numberOfSensors ; i++) {
+          runningSumDouble[i] = runningSum[i];
+      } 
+      
+      for (int i = 0 ; i<numberOfSensors ; i++) {
+          runningAvg[i] = runningSumDouble[i]/4;
+      }
+      for (int i = 0 ; i<numberOfSensors ; i++) {
+          momAvg += sensorReadings[0][i];
+      }
+      momAvg = momAvg/numberOfSensors;
+      
 
       Serial.print(count);
-      Serial.print(",");
-      Serial.print(read1);
-      Serial.print(",");
-      Serial.print(read2);
-      Serial.print(",");
-      Serial.print(read3);
-      Serial.print(",");
-      Serial.println(read4);
-
-      if (read1+10 < readSum/4 || read1-10 > readSum/4 || 
-        read2+10 < readSum/4 || read2-10 > readSum/4 ||
-        read3+10 < readSum/4 || read3-10 > readSum/4 ||
-        read4+10 < readSum/4 || read4-10 > readSum/4 ) {
+      Serial.print("\t");
+      for (int i=0 ; i<4 ; i++) {
+        Serial.print(sensorReadings[0][i]);Serial.print("\t");
+        Serial.print(runningAvg[i]);Serial.print("\t");
+      }
+      Serial.println(momAvg);
+      /*
+      Serial.println(  (
+        sensorReadings[0][0]+
+        sensorReadings[0][1]+
+        sensorReadings[0][2]+ 
+        sensorReadings[0][3])/numberOfSensors );
+      
+      
+      if (RUNNING AVG CHECKER) {
         
         runProgram = false;
         digitalWrite(PUMP_PWM_PIN, 0);
@@ -300,9 +335,10 @@ void loop() {
         Serial.print("Cycle: ");
         Serial.println(count);
       }
+      */
       
       previousReadMillis = currentMillis;
-    }
+    }//end readTimer
 
   }//end program wrapper
   
