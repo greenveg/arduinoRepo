@@ -24,13 +24,9 @@ boolean newData = false;
 //User settings
 uint8_t pumpPwm = 100;
 uint32_t pumpDelay = 1000;
-<<<<<<< HEAD
 uint32_t maxCount = 50     ;
 uint32_t readTimer = 500;
- 
-=======
-uint32_t maxCount = 400     ;
->>>>>>> 2ede8995ff985a20aa2a209075bb544dc2c52c4c
+
 
 //General vars
 unsigned long previousMillis = 0; 
@@ -340,6 +336,10 @@ void loop() {
         Serial.println(count);
       }
       */
+      for (int i = 0 ; i<numberOfSensors ; i++) {
+          runningSum[i] = 0;
+      }
+      momAvg = 0;
       
       previousReadMillis = currentMillis;
     }//end readTimer
