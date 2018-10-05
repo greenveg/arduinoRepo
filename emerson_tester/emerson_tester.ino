@@ -189,6 +189,8 @@ void loop() {
       switch (state) {
         case 0:
           printDateAndTime();
+          Serial.print("Script will run: ");Serial.print(maxCount);
+          Serail.println(" sessions and then shut off)";
           Serial.print("cycle\t");
           Serial.print("s1\t");
           Serial.print("s1Avg\t");
@@ -205,24 +207,25 @@ void loop() {
           state++;
           break;
      
-        case 1:        
+        case 1: //Cold circuit        
           valveControl(1, 0, 1, 0);
           analogWrite(PUMP_PWM_PIN, pumpPwm);
-          wateForMs(5000);
+          waitForMs(5000);
           break;
-        case 2:
+          
+        case 2: //Bleeds in hot water
           valveControl(0, 1, 1, 0);
-          waitForMs(700);
+          waitForMs(1200);
           break;
 
-        case 3:
+        case 3: //Hot circuit
           valveControl(0, 1, 0, 1);
           waitForMs(5000);
           break;
 
-        case 4:
+        case 4: //Bleeds in cold water
           valveControl(1, 0, 0, 1);
-          waitForMs(800);
+          waitForMs(500);
           break;
              
         case 5:
@@ -282,28 +285,11 @@ void loop() {
         Serial.print(runningAvg[i]);Serial.print("\t");
       }
       Serial.println(momAvg);
-      /*
-      Serial.println(  (
-        sensorReadings[0][0]+
-        sensorReadings[0][1]+
-        sensorReadings[0][2]+ 
-        sensorReadings[0][3])/numberOfSensors );
-      
-      
-      if (RUNNING AVG CHECKER) {
-        
-        runProgram = false;
-        digitalWrite(PUMP_PWM_PIN, 0);
-        digitalWrite(COLD_OUT_PIN, LOW);
-        digitalWrite(HOT_OUT_PIN, LOW);
-        digitalWrite(COLD_IN_PIN, LOW);
-        digitalWrite(HOT_IN_PIN, LOW);
-        Serial.println("Error: one or more sensors is out of spec");
-        Serial.print("Cycle: ");
-        Serial.println(count);
+
+      for (int i=0 ; i<numberOfSensors ; i++) {
+        runningSum[i] = 0;
       }
-      */
-      
+      momAvg = 0;
       previousReadMillis = currentMillis;
     }//end readTimer
 
