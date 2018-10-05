@@ -25,7 +25,7 @@ uint8_t pumpPwm = 100;
 uint32_t pumpDelay = 1000;
 uint32_t maxCount = 50;
 uint32_t readTimer = 500;
-double allowedAdcError = 3;
+double allowedAdcError = 8.00;
  
 
 //General vars
@@ -33,7 +33,7 @@ unsigned long previousMillis = 0;
 unsigned long previousReadMillis = 0; 
 unsigned long currentMillis = 0;
 unsigned long waitStartedMillis = 0;
-
+uint32_t readCount = 0;
 unsigned int eepromCountAddr = 350;
 unsigned long startTime = 0;
 uint8_t state = 0;
@@ -52,17 +52,20 @@ bool runPump = false;
 //Sensor data handling
 const int numberOfSensors = 4;
 const int numberOfSavedValues = 4;
-const int refSensor = 4;
+const int refSensor = 3;
 uint16_t sensorReadings[numberOfSavedValues][numberOfSensors];
 uint16_t runningSum[numberOfSensors];
 double runningSumDouble[numberOfSensors];
 double runningAvg[numberOfSensors];
 double momAvg;
-bool sensorWithError[4];
+bool sensorWithAdcError[4];
+bool sensorWithRunningAvgError[4];
 
 
 
 //Functions
+void recvWithEndMarker();
+void doStuffWithData();
 
 void printDateAndTime() {
   int n;
@@ -192,7 +195,7 @@ void loop() {
       switch (state) {
         case 0:
           printDateAndTime();
-          Serial.print("Script will run: ");Serial.print(maxCount);
+          Serial.print("Script will run ");Serial.print(maxCount);
           Serial.println(" sessions and then shut off");
           Serial.print("cycle\t");
           Serial.print("s1\t");
@@ -248,6 +251,7 @@ void loop() {
     //Sensor reading and data handling
     if (currentMillis - previousReadMillis >= readTimer) {
       previousReadMillis = currentMillis;
+      readCount++;
       
       //Shift values one row down
       for (int i=2 ; i>=0 ; i--) {
@@ -261,38 +265,20 @@ void loop() {
       sensorReadings[0][1] = analogRead(CONTROLLINO_A1);
       sensorReadings[0][2] = analogRead(CONTROLLINO_A2);
       sensorReadings[0][3] = analogRead(CONTROLLINO_A3);
-    
-      //Calculate running sums
-      for (int k = 0 ; k<numberOfSensors ; k++) {
-        for (int i = 0 ; i<numberOfSavedValues ; i++) {
-          runningSum[k] += sensorReadings[i][k];
+
+      momAvg=0;
+      for (int i = 0 ; i<numberOfSensors ; i++) {
+        double avg = 0;
+        for (int j = 0 ; j<numberOfSavedValues ; j++) {
+          avg += sensorReadings[j][i];
         }
-      }
-      //Convert to double
-      for (int i = 0 ; i<numberOfSensors ; i++) {
-          runningSumDouble[i] = runningSum[i];
-      } 
-      //Calculate runnging average (double)
-      for (int i = 0 ; i<numberOfSensors ; i++) {
-          runningAvg[i] = runningSumDouble[i]/4;
-      }
-      //Calculate all sensor average
-      for (int i = 0 ; i<(numberOfSensors-1) ; i++) {
-          momAvg += sensorReadings[0][i];
+        avg /= 4;
+        runningAvg[i] = avg;
+
+         momAvg += sensorReadings[0][i];
       }
       momAvg = momAvg/numberOfSensors;
-
-      //Check if sensors 1-3 are within spec
-      for (int i=0 ; i<3 ; i++) {
-        if (runningAvg[i] < runningAvg[refSensor]-allowedAdcError || 
-            runningAvg[i] > runningAvg[refSensor]+allowedAdcError) {
-          Serial.print("Sensor: ");Serial.print(i);Serial.print("was off by more than ");
-          Serial.println(allowedAdcError);
-          Serial.println("Sensor id saved in sensorWithError[]");
-          sensorWithError[i] = 1;
-        }
-      }
-      
+            
       //Print log friendly string on serial
       Serial.print(count);
       Serial.print("\t");
@@ -302,12 +288,31 @@ void loop() {
       }
       Serial.println(momAvg);
 
-
-      //Zero running sum and momAvg
-      for (int i=0 ; i<numberOfSensors ; i++) {
-        runningSum[i] = 0;
+      
+      //Check if sensors 1-3 are within spec
+      if (readCount>6 && state != 2 && state != 4 ) {
+        for (int i=0 ; i<3 ; i++) {
+          if ((runningAvg[i] < (runningAvg[refSensor]-allowedAdcError)) || 
+              (runningAvg[i] > (runningAvg[refSensor]+allowedAdcError)) ) {
+            //Serial.println(runningAvg[i]);
+            //Serial.println((runningAvg[refSensor]));
+            Serial.print("Running avg for sensor ");Serial.print(i+1);Serial.print(" was off by more than ");
+            Serial.println(allowedAdcError);
+            //Serial.println("Sensor id saved in sensorWithError[]");
+            sensorWithRunningAvgError[i] = 1;
+          }
+          /*
+          if (sensorReadings[i] < sensorReadings[refSensor]-(int)allowedAdcError ||
+              sensorReadings[i] > sensorReadings[refSensor]+(int)allowedAdcError) {
+            Serial.print("Sensor ");Serial.print(i);Serial.print("reading was off by more than ");
+            Serial.println(allowedAdcError);
+            sensorWithAdcError[i] = 1;
+          }
+          */
+        }
       }
-      momAvg = 0;
+    
+        
     }//end readTimer
 
   }//end program wrapper
@@ -399,7 +404,7 @@ void doStuffWithData() {
 
     else if(strcmp(receivedChars, "sensorError") == 0) {
       for (int i=0 ; i<4 ; i++) {
-        Serial.println(sensorWithError[i]);
+        Serial.println(sensorWithAdcError[i]);
       }
     }
    
@@ -415,6 +420,7 @@ void doStuffWithData() {
       valveControl(0, 0, 0, 0);
       runProgram = false;
       countDownMinutesHasRun = false;
+      readCount = 0;
       state = 0;
       Serial.println("Program stopped and state resetted");
       Serial.println("------------------------------");
