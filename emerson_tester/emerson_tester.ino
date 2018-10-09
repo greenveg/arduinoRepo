@@ -23,7 +23,7 @@ boolean newData = false;
 //User settings
 uint8_t pumpPwm = 100;
 uint32_t pumpDelay = 1000;
-uint32_t maxCount = 50;
+uint32_t maxCount = 10;
 uint32_t readTimer = 500;
 double allowedAdcError = 8.00;
  
@@ -152,6 +152,19 @@ void valveControl(bool coldIn, bool hotIn, bool coldOut, bool hotOut) {
   digitalWrite(HOT_OUT_PIN, hotOut);
 }
 
+void report() {
+  Serial.println("Sensor report:");
+  Serial.println("If 1, sensor reading was outside values");
+  Serial.println(' ');
+  for (int i=0 ; i<3 ; i++) {
+    Serial.print("Sensor "); Serial.print(i+1);
+    Serial.print(" runningAvgCheck: ");
+    Serial.println(sensorWithRunningAvgError[i]);
+    Serial.print("Sensor "); Serial.print(i+1);
+    Serial.print(" adcCheck: ");
+    Serial.println(sensorWithAdcError[i]);
+  }
+}
 
 void setup() {
   Controllino_RTC_init(0);
@@ -197,6 +210,9 @@ void loop() {
           printDateAndTime();
           Serial.print("Script will run ");Serial.print(maxCount);
           Serial.println(" sessions and then shut off");
+          Serial.print("Allowed error for sensor is: ");
+          Serial.println(allowedAdcError);
+          Serial.println(' ');
           Serial.print("cycle\t");
           Serial.print("s1\t");
           Serial.print("s1Avg\t");
@@ -245,6 +261,7 @@ void loop() {
       Serial.println("Program run finished");
       analogWrite(PUMP_PWM_PIN, 0);
       valveControl(0, 0, 0, 0);
+      report();
       runProgram = false;
     }
     
@@ -260,12 +277,13 @@ void loop() {
         } 
       }
 
-      //Insert new values
+      //Insert new values in array
       sensorReadings[0][0] = analogRead(CONTROLLINO_A0);
       sensorReadings[0][1] = analogRead(CONTROLLINO_A1);
       sensorReadings[0][2] = analogRead(CONTROLLINO_A2);
       sensorReadings[0][3] = analogRead(CONTROLLINO_A3);
 
+      //Data handling      
       momAvg=0;
       for (int i = 0 ; i<numberOfSensors ; i++) {
         double avg = 0;
@@ -294,21 +312,18 @@ void loop() {
         for (int i=0 ; i<3 ; i++) {
           if ((runningAvg[i] < (runningAvg[refSensor]-allowedAdcError)) || 
               (runningAvg[i] > (runningAvg[refSensor]+allowedAdcError)) ) {
-            //Serial.println(runningAvg[i]);
-            //Serial.println((runningAvg[refSensor]));
-            Serial.print("Running avg for sensor ");Serial.print(i+1);Serial.print(" was off by more than ");
-            Serial.println(allowedAdcError);
-            //Serial.println("Sensor id saved in sensorWithError[]");
+            //Serial.print("Running avg for sensor ");Serial.print(i+1);Serial.print(" was off by more than ");
+            //Serial.println(allowedAdcError);
             sensorWithRunningAvgError[i] = 1;
           }
-          /*
+          
           if (sensorReadings[i] < sensorReadings[refSensor]-(int)allowedAdcError ||
               sensorReadings[i] > sensorReadings[refSensor]+(int)allowedAdcError) {
-            Serial.print("Sensor ");Serial.print(i);Serial.print("reading was off by more than ");
-            Serial.println(allowedAdcError);
+            //Serial.print("Sensor ");Serial.print(i);Serial.print("reading was off by more than ");
+            //Serial.println(allowedAdcError);
             sensorWithAdcError[i] = 1;
           }
-          */
+          
         }
       }
     
@@ -428,6 +443,10 @@ void doStuffWithData() {
 
     else if(strcmp(receivedChars, "rtc") == 0) {
       printDateAndTime();
+    } 
+
+    else if(strcmp(receivedChars, "report") == 0) {
+      report();
     } 
     
     else if(strcmp(receivedChars, "++") == 0) {
