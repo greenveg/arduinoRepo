@@ -248,7 +248,7 @@ void loop() {
         case 1: //Cold circuit        
           valveControl(1, 0, 1, 0);
           analogWrite(PUMP_PWM_PIN, pumpPwm);
-          waitForMs(5000);
+          waitForMs(3000);
           break;
           
         case 2: //Bleeds in hot water
@@ -258,7 +258,7 @@ void loop() {
 
         case 3: //Hot circuit
           valveControl(0, 1, 0, 1);
-          waitForMs(5000);
+          waitForMs(3000);
           break;
 
         case 4: //Bleeds in cold water
@@ -275,8 +275,8 @@ void loop() {
     }//end count checker if
     else {
       Serial.println("Program run finished");
-      zeroEverything();
       report();
+      zeroEverything();
       runProgram = false;
     }
     
