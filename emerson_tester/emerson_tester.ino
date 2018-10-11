@@ -23,7 +23,7 @@ boolean newData = false;
 //User settings
 uint8_t pumpPwm = 100;
 uint32_t pumpDelay = 1000;
-uint32_t maxCount = 10;
+uint32_t maxCount = 200;
 uint32_t readTimer = 500;
 double allowedAdcError = 8.00;
  
@@ -166,6 +166,21 @@ void report() {
   }
 }
 
+void zeroEverything() {
+  analogWrite(PUMP_PWM_PIN, 0);
+  valveControl(0, 0, 0, 0);
+  runProgram = false;
+  countDownMinutesHasRun = false;
+  count = 0;
+  readCount = 0;
+  state = 0;
+
+  for (int k=0 ; k<4 ; k++)  {
+    sensorWithAdcError[k] = 0;
+    sensorWithRunningAvgError[k] = 0;
+  }
+}
+
 void setup() {
   Controllino_RTC_init(0);
 
@@ -213,15 +228,16 @@ void loop() {
           Serial.print("Allowed error for sensor is: ");
           Serial.println(allowedAdcError);
           Serial.println(' ');
-          Serial.print("cycle\t");
-          Serial.print("s1\t");
-          Serial.print("s1Avg\t");
-          Serial.print("s2\t");
-          Serial.print("s2Avg\t");
-          Serial.print("s3\t");
-          Serial.print("s3Avg\t");
-          Serial.print("s4\t");
-          Serial.print("s4Avg\t");
+          Serial.print("readCount,\t");
+          Serial.print("cycle,\t");
+          Serial.print("s1,\t");
+          Serial.print("s1Avg,\t");
+          Serial.print("s2,\t");
+          Serial.print("s2Avg,\t");
+          Serial.print("s3,\t");
+          Serial.print("s3Avg,\t");
+          Serial.print("s4,\t");
+          Serial.print("s4Avg,\t");
           Serial.println("Mom. avg");
           
           valveControl(0, 0, 0, 0);
@@ -259,8 +275,7 @@ void loop() {
     }//end count checker if
     else {
       Serial.println("Program run finished");
-      analogWrite(PUMP_PWM_PIN, 0);
-      valveControl(0, 0, 0, 0);
+      zeroEverything();
       report();
       runProgram = false;
     }
@@ -298,13 +313,15 @@ void loop() {
       momAvg = momAvg/numberOfSensors;
             
       //Print log friendly string on serial
+      Serial.print(readCount);
+      Serial.print(", \t");
       Serial.print(count);
-      Serial.print("\t");
+      Serial.print(", \t");
       for (int i=0 ; i<4 ; i++) {
-        Serial.print(sensorReadings[0][i]);Serial.print("\t");
-        Serial.print(runningAvg[i]);Serial.print("\t");
+        Serial.print(sensorReadings[0][i]);Serial.print(", \t");
+        Serial.print(runningAvg[i]);Serial.print(", \t");
       }
-      Serial.println(momAvg);
+      Serial.println(momAvg); 
 
       
       //Check if sensors 1-3 are within spec
@@ -366,6 +383,12 @@ void doStuffWithData() {
     
     if(strcmp(receivedChars, "list") == 0) {
       printListOfCommands();
+    }
+
+    else if(strcmp(receivedChars, "name") == 0) {
+      Serial.println(' ');
+      Serial.println( __FILE__ );
+      Serial.println(' ');
     }
     
     else if(strcmp(receivedChars, "pump") == 0) {
@@ -431,12 +454,7 @@ void doStuffWithData() {
     }
 
     else if(strcmp(receivedChars, "reset") == 0) {
-      analogWrite(PUMP_PWM_PIN, 0);
-      valveControl(0, 0, 0, 0);
-      runProgram = false;
-      countDownMinutesHasRun = false;
-      readCount = 0;
-      state = 0;
+      zeroEverything();
       Serial.println("Program stopped and state resetted");
       Serial.println("------------------------------");
     }
