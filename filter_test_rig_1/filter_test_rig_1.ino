@@ -16,7 +16,7 @@
 
 
 //User settings
-double maxPressure = 5.5;
+double targetPressure = 5;
 double errorPressure = 6;
 const uint16_t restAtPressureMs = 1000;
 unsigned long maxCount = 1000;
@@ -42,6 +42,10 @@ bool pumpOnFlag = false;
 unsigned long waitStartedMillis = 0;
 
 //Script vars
+bool runProgram = false;
+bool cyclic = false;
+bool burst = false;
+bool hold = false;
 unsigned long minute = 60000;
 uint8_t state = 0;
 uint8_t errorState = 99;
@@ -49,7 +53,6 @@ unsigned long count = 0;
 uint8_t eepromCount = 0;
 const unsigned int eepromCountAddr = 350;
 unsigned long pumpStartedMillis = 0;
-bool runProgram = false;
 int pumpPwm = 0;
 double currentPressure = 0;
 double lastPressure = 0;
@@ -57,6 +60,9 @@ double currentFlow = 0;
 double lastFlow = 0;
 double currentTemp = 0;
 double lastTemp = 0;
+double maxPressure = 0;
+int valuesToStore = 100;
+double burstPressures[valuesToStore];
 
 
 
@@ -119,11 +125,14 @@ void printDateAndTime() {
 
 void printListOfCommands() {
   Serial.println(' ');
+  Serial.println( __FILE__ );
+  Serial.println(' ');
   Serial.println("PLEASE NOTE: line ending should be CR only!");
   Serial.println("Available commands:");
   Serial.println(' ');
   Serial.println("list = list all commands");
   Serial.println("pump = turns pump on or off");
+  Serial.println("burst = reads and saves max pressure in burst test");  
   Serial.println("eeprom = reads address 350 on EEPROM");
   Serial.println("zero = writes 0 to address 350 on EEPROM");
   Serial.println("save = writes count to address 350 on EEPROM");
@@ -181,8 +190,9 @@ void setup() {
   pinMode(PUMP_INB_PIN, OUTPUT);
   pinMode(PRESSURE_PIN, INPUT);
   pinMode(FLOW_PIN, INPUT);
+  pinMode(TEMP_PIN, INPUT);
 
-  // CW
+  //Set-and-forget direction to CW
   digitalWrite(PUMP_INA_PIN, LOW);
   digitalWrite(PUMP_INB_PIN, HIGH);
   
@@ -202,117 +212,140 @@ void setup() {
 
 void loop() {
   currentMillis = millis();
-
-  if (currentPressure > errorPressure) {
-    Serial.println("errorPressure reached! Shutting down!");
-  }
-  else { analogWrite(PUMP_PWM_PIN, pumpPwm); }
-  
   recvWithEndMarker();  //Read serial
   doStuffWithData();    //Do things with received data, if you want to add a command, edit this func
 
-  //Program
+  //Over pressure check
+  if (currentPressure > errorPressure) {
+    Serial.println("errorPressure reached! Shutting down!");
+    analogWrite(PUMP_PWM_PIN, 0);
+  }
+  else { analogWrite(PUMP_PWM_PIN, pumpPwm); }
+  
+  //Programs
   if (runProgram) {
-    if (currentMillis - previousReadMillis >= 500) {
-      previousReadMillis = currentMillis;
-      //Serial.println("Reading sensors");
+  
+    if (cyclic) {
+      if (currentMillis - previousReadMillis >= 500) {
+        previousReadMillis = currentMillis;
+        //Serial.println("Reading sensors");
+  
+        lastPressure = currentPressure;
+        //lastTemp = currentTemp;
+        //lastFlow = currentFlow;
+  
+        currentPressure = analogRead(PRESSURE_PIN)*0.03;
+        currentTemp = readTemp();
+        currentFlow= readFlow();
+        
+        Serial.print(count);
+        Serial.print(",");
+        Serial.print(currentPressure);
+        Serial.print(",");
+        Serial.println(pumpPwm);
+        /*
+        Serial.print(currentTemp);
+        Serial.print(",");
+        Serial.println(currentFlow);
+        */
+      }
 
-      lastPressure = currentPressure;
-      //lastTemp = currentTemp;
-      //lastFlow = currentFlow;
-
-      currentPressure = analogRead(PRESSURE_PIN)*0.03;
-      currentTemp = readTemp();
-      currentFlow= readFlow();
-      
-      Serial.print(count);
-      Serial.print(",");
-      Serial.print(currentPressure);
-      Serial.print(",");
-      Serial.println(pumpPwm);
-      /*
-      Serial.print(currentTemp);
-      Serial.print(",");
-      Serial.println(currentFlow);
-      */
-    }
-
-
-    if (count < maxCount) {
-      
-      
-      switch (state) {
-        case 0:
-          printDateAndTime();
-          Serial.println(' ');
-          Serial.print("Cycle ");
-          Serial.print(count + 1);
-          Serial.print("/");
-          Serial.println(maxCount);
-
-          state++;
-          break;  
-
-        case 1:
-          pumpStartedMillis = currentMillis;  
-          //analogWrite(PUMP_PWM_PIN, 50);
-          state++;
-          break;
-
-        case 2:
-          if (currentPressure <= maxPressure && pumpPwm < 255) {
-            pumpPwm++;
-            //analogWrite(PUMP_PWM_PIN, pumpPwm);
-            state = 3;
-          }
-          else if (pumpPwm >= 255 && currentPressure <= maxPressure && lastPressure <= maxPressure) {
-            Serial.println("Pressure could not be reached, going to shutdown");
+      if (count < maxCount) {
+        switch (state) {
+          case 0:
+            printDateAndTime();
+            Serial.println(' ');
+            Serial.print("Cycle ");
+            Serial.print(count + 1);
+            Serial.print("/");
+            Serial.println(maxCount);
+  
+            state++;
+            break;  
+  
+          case 1:
+            pumpStartedMillis = currentMillis;
+            state++;
+            break;
+  
+          case 2:
+            if (currentPressure <= targetPressure && pumpPwm < 255) {
+              pumpPwm++;
+              state = 3;
+            }
+            else if (currentPressure >= targetPressure && lastPressure >= targetPressure) {
+              Serial.println("Pressure reached");
+              state = 5;
+            }
+            else if (pumpPwm >= 255 && currentPressure <= targetPressure && lastPressure <= targetPressure) {
+              Serial.println("Pressure could not be reached, going to shutdown");
+              pumpPwm = 0;
+              state = 99;
+            }
+            break;
+            
+          case 3:
+            //Tiny wait time before we increase pwm
+            waitForMs(100);
+            break;
+            
+          case 4:
+            state = 2;
+            break;
+            
+          case 5:
+            //Rest at the pwm that reached pressure
+            waitForMs(restAtPressureMs);
+            break;
+            
+          case 6:
+            //Turn pump off
             pumpPwm = 0;
-            state = 99;
-          }
-          else if (currentPressure >= maxPressure && lastPressure >= maxPressure) {
-            Serial.println("Pressure reached");
-            state = 5;
-          }
-          break;
-          
-        case 3:
-          waitForMs(100);
-          break;
-          
-        case 4:
-          state = 2;
-          break;
-          
-        case 5:
-          waitForMs(restAtPressureMs);
-          break;
-          
-        case 6:
-          pumpPwm = 0;
-          //analogWrite(PUMP_PWM_PIN, pumpPwm);
-          state++;
-          break;
-          
-        case 7:
-          waitForMs(1000);
-          break;
-        case 8:
-          Serial.println("Cycle finished, restarting");
-          count++;
-          state = 2;
-          break;
-        case 99://error state
-          break; 
+            state++;
+            break;
+            
+          case 7:
+            //Wait before next cycle
+            waitForMs(1000);
+            break;
+          case 8:
+            Serial.println("Cycle finished, restarting");
+            count++;
+            state = 2;
+            break;
+          case 99://error state
+            break; 
+  
+        }//end switch
+        
+      }//end count checker if
+      else {
+        Serial.println("Program run finished");
+        runProgram = false;
+        cyclic = false;
+      }
+    }//end cyclic program
 
-      }//end switch
+    else if (burst) {
+      if (currentMillis - previousReadMillis >= 100) {
+        previousReadMillis = currentMillis;
+
+        //Move values one step
+        for (int i=valuesToStore-1 ; i>0 ; i--) {
+          burstPressures[9] = burstPressure[i-1];
+        }
+        
+        burstPressures[0] = analogRead(PRESSURE_PIN)*0.03;
+
+        if (
+      }
       
-    }//end count checker if
-    else {
-      Serial.println("Program run finished");
-      runProgram = false;
-    }
-
+    }//end burst program
+    
+    else if (hold) {
+    
+    }//end hold program
+    
   }//end program wrapper
 
 
@@ -393,6 +426,16 @@ void doStuffWithData() {
       runProgram = true;
       Serial.println("------------------------------");
       Serial.println("Program started");
+    }
+
+    else if (strcmp(receivedChars, "cyclic") == 0) {
+     cyclic = !cyclic; 
+    }
+    else if (strcmp(receivedChars, "burst") == 0) {
+      burst = !burst;
+    }
+    else if (strcmp(receivedChars, "hold") == 0) {
+      hold = !hold;
     }
 
     else if (strcmp(receivedChars, "reset") == 0) {

@@ -1,6 +1,6 @@
 #include <OneWire.h>
 
-OneWire  ds(8);  // This is where DQ of your DS18B20 will connect.
+OneWire  ds(A3);  // This is where DQ of your DS18B20 will connect.
 
 void setup(void) {
   Serial.begin(9600);
@@ -16,6 +16,7 @@ void getDeviceAddress(void) {
   addr array we declared above*/
   
   while(ds.search(addr)) {
+    Serial.println(' ');
     Serial.print("The address is:\t");
     //read each byte in the address array
     for( i = 0; i < 8; i++) {

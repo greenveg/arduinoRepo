@@ -107,7 +107,7 @@ void printListOfCommands() {
   Serial.println("rtc = reads current time and date");
   Serial.println("++ = goes to next state in program");
   Serial.println("[number between 0 and 255] sets pump PWM and runs pump");
-  Serial.println(' ');
+  Serial.println(' ');a
 }
 
 void countDownMinutes(int m, String message) {
