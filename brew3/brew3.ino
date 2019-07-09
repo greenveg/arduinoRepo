@@ -5,7 +5,7 @@
    * Insert windup/down for pump on/off
    * Better overall error handling
    * Minimum pump pwm is 20
-   * 
+   * Write ON/OFF for pump on LCD
    * 
 */
 
@@ -267,7 +267,7 @@
       probe02Temp = getTemperature(probe02Address);
       probe03Temp = getTemperature(probe03Address);
 
-      if(probe03Temp > enclosureOvertemp) {
+      if (probe03Temp > enclosureOvertemp) {
         state = STANDBY_STATE;
         SetAllDutCycles(0);
         analogWrite(PUMP_PIN, 0);
@@ -280,6 +280,19 @@
         
       }
 
+      if (probe01Temp > 105 || probe02Temp > 105) {
+        state = STANDBY_STATE;
+        SetAllDutCycles(0);
+        analogWrite(PUMP_PIN, 0);
+        lcd.clear();
+        LcdPrint(0, 0, "HEATER OVERTEMP");
+        LcdPrint(1, 0, "PLEASE SHUT DOWN");
+        LcdPrint(2, 0, "T1 or T2: ");
+        lcd.setCursor(10, 2);
+        lcd.print(probe01Temp);      
+        lcd.setCursor(16, 2);
+        lcd.print(probe02Temp);
+      }
       
   
       lcd.setCursor(4, 1);

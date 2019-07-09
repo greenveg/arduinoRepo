@@ -273,6 +273,7 @@ void loop() {
     
       }//end switch
     }//end count checker if
+   
     else {
       Serial.println("Program run finished");
       report();

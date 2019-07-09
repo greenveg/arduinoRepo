@@ -201,8 +201,17 @@
         pumpIsOn = !pumpIsOn;
       }
   
-    if (pumpIsOn) {analogWrite(PUMP_PIN, map(pumpPercentage, 0, 100, 0, 255));}
-    else {analogWrite(PUMP_PIN, 0);}
+    if (pumpIsOn) {
+      analogWrite(PUMP_PIN, map(pumpPercentage, 0, 100, 0, 255));
+      LcdPrint(3, 17, " ON");
+    }
+      
+    '*
+    +9OL§ 
+      A<
+      analogWrite(PUMP_PIN, 0);
+      LcdPrint(3, 17, "OFF");
+    }
   }
 
   void SerialWriteCsvHeader() {
