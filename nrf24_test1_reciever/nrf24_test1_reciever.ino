@@ -10,6 +10,10 @@ RF24 radio(10, 9);  // CE, CSN
 const byte address[6] = "00001";
 
 void setup()
+
+pinMode(9, OUTPUT);
+punMode(10, OUTPUT);
+
 {
   while (!Serial);
     Serial.begin(9600);

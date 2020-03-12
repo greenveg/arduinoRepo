@@ -18,6 +18,7 @@ void setup()
   
   //Set module as transmitter
   radio.stopListening();
+  radio.printDetails();
 }
 void loop()
 {

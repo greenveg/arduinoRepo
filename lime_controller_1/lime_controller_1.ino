@@ -11,7 +11,6 @@ byte off[] = {0x08, 0x4C, 0x49, 0x4D, 0x45, 0x42, 0x49, 0x4B, 0x45, 0xBE, 0x8A, 
 
 Bounce debouncer = Bounce();
 
-bool limeIsOn = false;
 
 void setup() {
   Serial.begin(9600);
@@ -29,17 +28,15 @@ void setup() {
 }
 
 void loop() {
-  if ( debouncer.fell() && !limeIsOn) {
-    //digitalWrite(LED_BUILTIN, HIGH);
+  if ( debouncer.fell() ) {
+    digitalWrite(LED_BUILTIN, HIGH);
     Serial.write(on, sizeof(on));
-    limeIsOn = true;
     digitalWrite(RELAY_PIN, HIGH);
   }
 
-  else if ( debouncer.rose() && limeIsOn) {
-    //digitalWrite(LED_BUILTIN, LOW);
+  else if ( debouncer.rose() ) {
+    digitalWrite(LED_BUILTIN, LOW);
     Serial.write(off, sizeof(off));
-    limeIsOn = false;
     digitalWrite(RELAY_PIN, LOW);
   }
 
